@@ -1,0 +1,3029 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ---------------------< com.vitaguard:backend-java >---------------------
+[INFO] Building backend-java 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:4.1.0:run (default-cli) > test-compile @ backend-java >>>
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ backend-java ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ backend-java ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ backend-java ---
+[INFO] skip non existing resourceDirectory /Users/bhat/Vital guard/vital-java/backend-java/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ backend-java ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:4.1.0:run (default-cli) < test-compile @ backend-java <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:4.1.0:run (default-cli) @ backend-java ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.0)
+
+2026-10-07T20:22:56.422+05:30  INFO 9093 --- [backend-java] [           main] c.v.backend_java.BackendJavaApplication  : Starting BackendJavaApplication using Java 21.0.11 with PID 9093 (/Users/bhat/Vital guard/vital-java/backend-java/target/classes started by bhat in /Users/bhat/Vital guard/vital-java/backend-java)
+2026-10-07T20:22:56.423+05:30  INFO 9093 --- [backend-java] [           main] c.v.backend_java.BackendJavaApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-10-07T20:22:56.785+05:30  INFO 9093 --- [backend-java] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-07T20:22:56.821+05:30  INFO 9093 --- [backend-java] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 32 ms. Found 13 JPA repository interfaces.
+2026-10-07T20:22:57.127+05:30  INFO 9093 --- [backend-java] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8000 (http)
+2026-10-07T20:22:57.135+05:30  INFO 9093 --- [backend-java] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-07T20:22:57.135+05:30  INFO 9093 --- [backend-java] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.22]
+2026-10-07T20:22:57.159+05:30  INFO 9093 --- [backend-java] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 709 ms
+2026-10-07T20:22:57.245+05:30  INFO 9093 --- [backend-java] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-07T20:22:57.276+05:30  INFO 9093 --- [backend-java] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.1.Final
+2026-10-07T20:22:57.497+05:30  INFO 9093 --- [backend-java] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-07T20:22:57.515+05:30  INFO 9093 --- [backend-java] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-07T20:22:57.608+05:30  INFO 9093 --- [backend-java] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@3c2dda7c
+2026-10-07T20:22:57.609+05:30  INFO 9093 --- [backend-java] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-07T20:22:57.640+05:30  WARN 9093 --- [backend-java] [           main] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-10-07T20:22:57.653+05:30  INFO 9093 --- [backend-java] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:mysql://localhost:3306/vitalguard?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC]
+	Database driver: MySQL Connector/J
+	Database dialect: MySQLDialect
+	Database version: 9.1
+	Default catalog/schema: vitalguard/undefined
+	Autocommit mode: undefined/unknown
+	Isolation level: REPEATABLE_READ [default REPEATABLE_READ]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-07T20:22:58.381+05:30  INFO 9093 --- [backend-java] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table ambulances 
+       drop 
+       foreign key FKgulo5715ytv1lemb8if7msily
+Hibernate: 
+    alter table doctors 
+       drop 
+       foreign key FKavgx42jjd4i4bo52ox3o6k460
+Hibernate: 
+    alter table family_members 
+       drop 
+       foreign key FKmdci0l8jglw0mya47m16lnutn
+Hibernate: 
+    alter table hospital_departments 
+       drop 
+       foreign key FKjbesk48enaw4y2xlqfgsirsog
+Hibernate: 
+    alter table medical_profiles 
+       drop 
+       foreign key FK17qm5n4ws3c8qx8gl4bci00dc
+Hibernate: 
+    alter table patient_family_relationships 
+       drop 
+       foreign key FKrhu1tgobmjcl5vehtp8mp89x4
+Hibernate: 
+    alter table patient_family_relationships 
+       drop 
+       foreign key FKo94xo4cdmtw1in5rvt9d7ands
+Hibernate: 
+    drop table if exists ai_health_assessments
+Hibernate: 
+    drop table if exists ambulance_requests
+Hibernate: 
+    drop table if exists ambulances
+Hibernate: 
+    drop table if exists doctors
+Hibernate: 
+    drop table if exists emergency_events
+Hibernate: 
+    drop table if exists emergency_requests
+Hibernate: 
+    drop table if exists family_members
+Hibernate: 
+    drop table if exists hospital_departments
+Hibernate: 
+    drop table if exists hospitals
+Hibernate: 
+    drop table if exists medical_histories
+Hibernate: 
+    drop table if exists medical_profiles
+Hibernate: 
+    drop table if exists patient_family_relationships
+Hibernate: 
+    drop table if exists users
+Hibernate: 
+    drop table if exists vitals
+Hibernate: 
+    create table ai_health_assessments (
+        anomaly_score integer not null,
+        deterioration_probability float(53) not null,
+        prediction_window_minutes integer not null,
+        risk_score integer not null,
+        id bigint not null auto_increment,
+        recorded_at datetime(6),
+        explanations TEXT,
+        patient_uid varchar(255) not null,
+        severity varchar(255),
+        trend varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table ambulance_requests (
+        distance_km float(53),
+        eta_minutes integer,
+        ambulance_id bigint not null,
+        emergency_id bigint not null,
+        id bigint not null auto_increment,
+        requested_at datetime(6),
+        responded_at datetime(6),
+        status varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table ambulances (
+        latitude float(53),
+        longitude float(53),
+        current_emergency_id bigint,
+        driver_id bigint,
+        id bigint not null auto_increment,
+        hospital_name varchar(255),
+        status varchar(255),
+        unit_id varchar(255) not null,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table doctors (
+        available_for_emergency bit,
+        on_duty bit,
+        hospital_id bigint not null,
+        id bigint not null auto_increment,
+        department_name varchar(255),
+        name varchar(255),
+        phone varchar(255),
+        specialization varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table emergency_events (
+        emergency_id bigint not null,
+        id bigint not null auto_increment,
+        timestamp datetime(6),
+        description TEXT,
+        status varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table emergency_requests (
+        ambulance_dispatched bit,
+        cancelled bit,
+        latitude float(53),
+        longitude float(53),
+        requires_ambulance bit,
+        risk_score integer,
+        sms_sent bit,
+        accepted_at datetime(6),
+        ambulance_id bigint,
+        assigned_at datetime(6),
+        completed_at datetime(6),
+        created_at datetime(6),
+        doctor_id bigint,
+        hospital_id bigint,
+        id bigint not null auto_increment,
+        detected_vitals varchar(255),
+        patient_uid varchar(255) not null,
+        required_department varchar(255),
+        severity varchar(255),
+        status varchar(255),
+        symptom_description TEXT,
+        symptoms TEXT,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table family_members (
+        id bigint not null auto_increment,
+        user_id bigint not null,
+        name varchar(255),
+        phone varchar(255),
+        relationship varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table hospital_departments (
+        accepting_patients bit,
+        available bit,
+        available_beds integer,
+        available_doctors integer,
+        emergency_service bit,
+        total_beds integer,
+        total_doctors integer,
+        hospital_id bigint not null,
+        id bigint not null auto_increment,
+        name varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table hospitals (
+        available_beds integer,
+        available_doctors integer,
+        lat float(53),
+        lng float(53),
+        rating float(53),
+        total_beds integer,
+        total_doctors integer,
+        id bigint not null auto_increment,
+        name varchar(255) not null,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table medical_histories (
+        id bigint not null auto_increment,
+        date varchar(255),
+        department varchar(255),
+        diagnosis TEXT,
+        doctor varchar(255),
+        hospital varchar(255),
+        medications TEXT,
+        notes TEXT,
+        patient_uid varchar(255) not null,
+        symptoms TEXT,
+        treatment TEXT,
+        vitals TEXT,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table medical_profiles (
+        abdominal_pain bit,
+        asthma bit,
+        chest_pain bit,
+        diabetes bit,
+        dizziness bit,
+        fainting bit,
+        headache bit,
+        hypertension bit,
+        palpitations bit,
+        seizures bit,
+        shortness_of_breath bit,
+        id bigint not null auto_increment,
+        user_id bigint not null,
+        allergies TEXT,
+        current_medications TEXT,
+        custom_symptoms TEXT,
+        existing_conditions TEXT,
+        previous_heart_problems TEXT,
+        previous_hospitalizations TEXT,
+        previous_surgeries TEXT,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table patient_family_relationships (
+        active bit,
+        emergency_contact bit,
+        created_at datetime(6),
+        family_user_id bigint not null,
+        id bigint not null auto_increment,
+        patient_id bigint not null,
+        updated_at datetime(6),
+        contact_phone varchar(255),
+        relationship varchar(255),
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table users (
+        age integer,
+        latitude float(53),
+        longitude float(53),
+        ambulance_id bigint,
+        hospital_id bigint,
+        id bigint not null auto_increment,
+        address varchar(255),
+        blood_group varchar(255),
+        doctor_hospital varchar(255),
+        doctor_name varchar(255),
+        doctor_phone varchar(255),
+        email varchar(255) not null,
+        fcm_token varchar(255),
+        full_name varchar(255),
+        password varchar(255) not null,
+        role varchar(255) not null,
+        uid varchar(255) not null,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    create table vitals (
+        alert_triggered bit,
+        bp_diastolic float(53),
+        bp_systolic float(53),
+        glucose float(53),
+        heart_rate float(53),
+        latitude float(53),
+        longitude float(53),
+        respiratory_rate float(53),
+        spo2 float(53),
+        temperature float(53),
+        id bigint not null auto_increment,
+        recorded_at datetime(6),
+        alert_message varchar(255),
+        patient_uid varchar(255) not null,
+        primary key (id)
+    ) engine=InnoDB
+Hibernate: 
+    alter table ambulances 
+       add constraint UKtqxq0biyarxkys5ajix7iku4l unique (unit_id)
+Hibernate: 
+    alter table hospitals 
+       add constraint UK6o8959a7cy7hc2nexleb3h1an unique (name)
+Hibernate: 
+    alter table medical_profiles 
+       add constraint UKkqvn4qtjxuyfv1d8d3ui9fjio unique (user_id)
+Hibernate: 
+    alter table users 
+       add constraint UK6dotkott2kjsp8vw4d0m25fb7 unique (email)
+Hibernate: 
+    alter table users 
+       add constraint UKefqukogbk7i0poucwoy2qie74 unique (uid)
+Hibernate: 
+    alter table ambulances 
+       add constraint FKgulo5715ytv1lemb8if7msily 
+       foreign key (driver_id) 
+       references users (id)
+Hibernate: 
+    alter table doctors 
+       add constraint FKavgx42jjd4i4bo52ox3o6k460 
+       foreign key (hospital_id) 
+       references hospitals (id)
+Hibernate: 
+    alter table family_members 
+       add constraint FKmdci0l8jglw0mya47m16lnutn 
+       foreign key (user_id) 
+       references users (id)
+Hibernate: 
+    alter table hospital_departments 
+       add constraint FKjbesk48enaw4y2xlqfgsirsog 
+       foreign key (hospital_id) 
+       references hospitals (id)
+Hibernate: 
+    alter table medical_profiles 
+       add constraint FK17qm5n4ws3c8qx8gl4bci00dc 
+       foreign key (user_id) 
+       references users (id)
+Hibernate: 
+    alter table patient_family_relationships 
+       add constraint FKrhu1tgobmjcl5vehtp8mp89x4 
+       foreign key (family_user_id) 
+       references users (id)
+Hibernate: 
+    alter table patient_family_relationships 
+       add constraint FKo94xo4cdmtw1in5rvt9d7ands 
+       foreign key (patient_id) 
+       references users (id)
+2026-10-07T20:22:58.606+05:30  INFO 9093 --- [backend-java] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-07T20:22:58.659+05:30  INFO 9093 --- [backend-java] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-07T20:22:59.379+05:30  INFO 9093 --- [backend-java] [           main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2026-10-07T20:22:59.379+05:30  WARN 9093 --- [backend-java] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-10-07T20:22:59.552+05:30  WARN 9093 --- [backend-java] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-10-07T20:22:59.918+05:30  INFO 9093 --- [backend-java] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
+2026-10-07T20:22:59.919+05:30  INFO 9093 --- [backend-java] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@5084cf1c]]
+2026-10-07T20:22:59.919+05:30  INFO 9093 --- [backend-java] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
+2026-10-07T20:22:59.929+05:30  INFO 9093 --- [backend-java] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8000 (http) with context path '/'
+2026-10-07T20:22:59.933+05:30  INFO 9093 --- [backend-java] [           main] c.v.backend_java.BackendJavaApplication  : Started BackendJavaApplication in 3.71 seconds (process running for 3.885)
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.email=? 
+    limit
+        ?
+Hibernate: 
+    insert 
+    into
+        users
+        (address, age, ambulance_id, blood_group, doctor_hospital, doctor_name, doctor_phone, email, fcm_token, full_name, hospital_id, latitude, longitude, password, role, uid) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+[SEED] Test patient LKT01 seeded successfully.
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.email=? 
+    limit
+        ?
+Hibernate: 
+    insert 
+    into
+        users
+        (address, age, ambulance_id, blood_group, doctor_hospital, doctor_name, doctor_phone, email, fcm_token, full_name, hospital_id, latitude, longitude, password, role, uid) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+[SEED] Test family member seeded successfully.
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.email=? 
+    limit
+        ?
+Hibernate: 
+    insert 
+    into
+        users
+        (address, age, ambulance_id, blood_group, doctor_hospital, doctor_name, doctor_phone, email, fcm_token, full_name, hospital_id, latitude, longitude, password, role, uid) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+[SEED] Test doctor user seeded successfully.
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.email=? 
+    limit
+        ?
+Hibernate: 
+    insert 
+    into
+        users
+        (address, age, ambulance_id, blood_group, doctor_hospital, doctor_name, doctor_phone, email, fcm_token, full_name, hospital_id, latitude, longitude, password, role, uid) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+[SEED] Demo hospital admin seeded successfully.
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.email=? 
+    limit
+        ?
+Hibernate: 
+    insert 
+    into
+        users
+        (address, age, ambulance_id, blood_group, doctor_hospital, doctor_name, doctor_phone, email, fcm_token, full_name, hospital_id, latitude, longitude, password, role, uid) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+[SEED] Demo ambulance driver seeded successfully.
+Hibernate: 
+    select
+        u1_0.id 
+    from
+        users u1_0 
+    where
+        u1_0.email=? 
+    limit
+        ?
+Hibernate: 
+    insert 
+    into
+        users
+        (address, age, ambulance_id, blood_group, doctor_hospital, doctor_name, doctor_phone, email, fcm_token, full_name, hospital_id, latitude, longitude, password, role, uid) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+[SEED] Test system admin seeded successfully.
+Hibernate: 
+    select
+        count(*) 
+    from
+        hospitals h1_0
+Hibernate: 
+    insert 
+    into
+        hospitals
+        (available_beds, available_doctors, lat, lng, name, rating, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid,
+        fm1_0.user_id,
+        fm1_0.id,
+        fm1_0.name,
+        fm1_0.phone,
+        fm1_0.relationship 
+    from
+        users u1_0 
+    left join
+        family_members fm1_0 
+            on u1_0.id=fm1_0.user_id 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        pr1_0.patient_id,
+        pr1_0.id,
+        pr1_0.active,
+        pr1_0.contact_phone,
+        pr1_0.created_at,
+        pr1_0.emergency_contact,
+        pr1_0.family_user_id,
+        pr1_0.relationship,
+        pr1_0.updated_at 
+    from
+        patient_family_relationships pr1_0 
+    where
+        pr1_0.patient_id=?
+Hibernate: 
+    select
+        fr1_0.family_user_id,
+        fr1_0.id,
+        fr1_0.active,
+        fr1_0.contact_phone,
+        fr1_0.created_at,
+        fr1_0.emergency_contact,
+        fr1_0.patient_id,
+        fr1_0.relationship,
+        fr1_0.updated_at 
+    from
+        patient_family_relationships fr1_0 
+    where
+        fr1_0.family_user_id=?
+Hibernate: 
+    update
+        users 
+    set
+        address=?,
+        age=?,
+        ambulance_id=?,
+        blood_group=?,
+        doctor_hospital=?,
+        doctor_name=?,
+        doctor_phone=?,
+        email=?,
+        fcm_token=?,
+        full_name=?,
+        hospital_id=?,
+        latitude=?,
+        longitude=?,
+        password=?,
+        role=?,
+        uid=? 
+    where
+        id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid,
+        fm1_0.user_id,
+        fm1_0.id,
+        fm1_0.name,
+        fm1_0.phone,
+        fm1_0.relationship 
+    from
+        users u1_0 
+    left join
+        family_members fm1_0 
+            on u1_0.id=fm1_0.user_id 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        pr1_0.patient_id,
+        pr1_0.id,
+        pr1_0.active,
+        pr1_0.contact_phone,
+        pr1_0.created_at,
+        pr1_0.emergency_contact,
+        pr1_0.family_user_id,
+        pr1_0.relationship,
+        pr1_0.updated_at 
+    from
+        patient_family_relationships pr1_0 
+    where
+        pr1_0.patient_id=?
+Hibernate: 
+    select
+        fr1_0.family_user_id,
+        fr1_0.id,
+        fr1_0.active,
+        fr1_0.contact_phone,
+        fr1_0.created_at,
+        fr1_0.emergency_contact,
+        fr1_0.patient_id,
+        fr1_0.relationship,
+        fr1_0.updated_at 
+    from
+        patient_family_relationships fr1_0 
+    where
+        fr1_0.family_user_id=?
+Hibernate: 
+    update
+        users 
+    set
+        address=?,
+        age=?,
+        ambulance_id=?,
+        blood_group=?,
+        doctor_hospital=?,
+        doctor_name=?,
+        doctor_phone=?,
+        email=?,
+        fcm_token=?,
+        full_name=?,
+        hospital_id=?,
+        latitude=?,
+        longitude=?,
+        password=?,
+        role=?,
+        uid=? 
+    where
+        id=?
+Hibernate: 
+    insert 
+    into
+        hospitals
+        (available_beds, available_doctors, lat, lng, name, rating, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospitals
+        (available_beds, available_doctors, lat, lng, name, rating, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospitals
+        (available_beds, available_doctors, lat, lng, name, rating, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospitals
+        (available_beds, available_doctors, lat, lng, name, rating, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        hospital_departments
+        (accepting_patients, available, available_beds, available_doctors, emergency_service, hospital_id, name, total_beds, total_doctors) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        doctors
+        (available_for_emergency, department_name, hospital_id, name, on_duty, phone, specialization) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+[SEED] Seeded 5 hospitals, departments, and doctors successfully.
+Hibernate: 
+    select
+        h1_0.id,
+        h1_0.available_beds,
+        h1_0.available_doctors,
+        h1_0.lat,
+        h1_0.lng,
+        h1_0.name,
+        h1_0.rating,
+        h1_0.total_beds,
+        h1_0.total_doctors 
+    from
+        hospitals h1_0 
+    where
+        h1_0.name=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        count(*) 
+    from
+        ambulances a1_0
+Hibernate: 
+    insert 
+    into
+        ambulances
+        (current_emergency_id, driver_id, hospital_name, latitude, longitude, status, unit_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        ambulances
+        (current_emergency_id, driver_id, hospital_name, latitude, longitude, status, unit_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        ambulances
+        (current_emergency_id, driver_id, hospital_name, latitude, longitude, status, unit_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        ambulances
+        (current_emergency_id, driver_id, hospital_name, latitude, longitude, status, unit_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        ambulances
+        (current_emergency_id, driver_id, hospital_name, latitude, longitude, status, unit_id) 
+    values
+        (?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        a1_0.id,
+        a1_0.current_emergency_id,
+        a1_0.driver_id,
+        a1_0.hospital_name,
+        a1_0.latitude,
+        a1_0.longitude,
+        a1_0.status,
+        a1_0.unit_id 
+    from
+        ambulances a1_0 
+    where
+        a1_0.id=?
+Hibernate: 
+    update
+        ambulances 
+    set
+        current_emergency_id=?,
+        driver_id=?,
+        hospital_name=?,
+        latitude=?,
+        longitude=?,
+        status=?,
+        unit_id=? 
+    where
+        id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid,
+        fm1_0.user_id,
+        fm1_0.id,
+        fm1_0.name,
+        fm1_0.phone,
+        fm1_0.relationship 
+    from
+        users u1_0 
+    left join
+        family_members fm1_0 
+            on u1_0.id=fm1_0.user_id 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        pr1_0.patient_id,
+        pr1_0.id,
+        pr1_0.active,
+        pr1_0.contact_phone,
+        pr1_0.created_at,
+        pr1_0.emergency_contact,
+        pr1_0.family_user_id,
+        pr1_0.relationship,
+        pr1_0.updated_at 
+    from
+        patient_family_relationships pr1_0 
+    where
+        pr1_0.patient_id=?
+Hibernate: 
+    select
+        fr1_0.family_user_id,
+        fr1_0.id,
+        fr1_0.active,
+        fr1_0.contact_phone,
+        fr1_0.created_at,
+        fr1_0.emergency_contact,
+        fr1_0.patient_id,
+        fr1_0.relationship,
+        fr1_0.updated_at 
+    from
+        patient_family_relationships fr1_0 
+    where
+        fr1_0.family_user_id=?
+Hibernate: 
+    update
+        users 
+    set
+        address=?,
+        age=?,
+        ambulance_id=?,
+        blood_group=?,
+        doctor_hospital=?,
+        doctor_name=?,
+        doctor_phone=?,
+        email=?,
+        fcm_token=?,
+        full_name=?,
+        hospital_id=?,
+        latitude=?,
+        longitude=?,
+        password=?,
+        role=?,
+        uid=? 
+    where
+        id=?
+[SEED] Linked ambulance driver to AMB-01 (Apollo Hospital).
+[SEED] Seeded 5 ambulances successfully.
+Hibernate: 
+    select
+        a1_0.id,
+        a1_0.current_emergency_id,
+        a1_0.driver_id,
+        a1_0.hospital_name,
+        a1_0.latitude,
+        a1_0.longitude,
+        a1_0.status,
+        a1_0.unit_id 
+    from
+        ambulances a1_0 
+    where
+        a1_0.unit_id=?
+Hibernate: 
+    select
+        pfr1_0.id 
+    from
+        patient_family_relationships pfr1_0 
+    where
+        pfr1_0.patient_id=? 
+        and pfr1_0.family_user_id=? 
+        and pfr1_0.active=true 
+    limit
+        ?
+Hibernate: 
+    insert 
+    into
+        patient_family_relationships
+        (active, contact_phone, created_at, emergency_contact, family_user_id, patient_id, relationship, updated_at) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?)
+[SEED] Family-patient relationship created successfully.
+2026-10-07T20:23:14.301+05:30  INFO 9093 --- [backend-java] [nio-8000-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-07T20:23:14.301+05:30  INFO 9093 --- [backend-java] [nio-8000-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-07T20:23:14.302+05:30  INFO 9093 --- [backend-java] [nio-8000-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-10-07T20:23:59.920+05:30  INFO 9093 --- [backend-java] [MessageBroker-1] o.s.w.s.c.WebSocketMessageBrokerStats    : WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.email is null
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid is null
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.email is null
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid is null
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        er1_0.id,
+        er1_0.accepted_at,
+        er1_0.ambulance_dispatched,
+        er1_0.ambulance_id,
+        er1_0.assigned_at,
+        er1_0.cancelled,
+        er1_0.completed_at,
+        er1_0.created_at,
+        er1_0.detected_vitals,
+        er1_0.doctor_id,
+        er1_0.hospital_id,
+        er1_0.latitude,
+        er1_0.longitude,
+        er1_0.patient_uid,
+        er1_0.required_department,
+        er1_0.requires_ambulance,
+        er1_0.risk_score,
+        er1_0.severity,
+        er1_0.sms_sent,
+        er1_0.status,
+        er1_0.symptom_description,
+        er1_0.symptoms 
+    from
+        emergency_requests er1_0 
+    where
+        er1_0.patient_uid=? 
+        and er1_0.status in (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        mp1_0.id,
+        mp1_0.abdominal_pain,
+        mp1_0.allergies,
+        mp1_0.asthma,
+        mp1_0.chest_pain,
+        mp1_0.current_medications,
+        mp1_0.custom_symptoms,
+        mp1_0.diabetes,
+        mp1_0.dizziness,
+        mp1_0.existing_conditions,
+        mp1_0.fainting,
+        mp1_0.headache,
+        mp1_0.hypertension,
+        mp1_0.palpitations,
+        mp1_0.previous_heart_problems,
+        mp1_0.previous_hospitalizations,
+        mp1_0.previous_surgeries,
+        mp1_0.seizures,
+        mp1_0.shortness_of_breath,
+        mp1_0.user_id 
+    from
+        medical_profiles mp1_0 
+    left join
+        users u1_0 
+            on u1_0.id=mp1_0.user_id 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        h1_0.id,
+        h1_0.available_beds,
+        h1_0.available_doctors,
+        h1_0.lat,
+        h1_0.lng,
+        h1_0.name,
+        h1_0.rating,
+        h1_0.total_beds,
+        h1_0.total_doctors 
+    from
+        hospitals h1_0
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        hd1_0.id,
+        hd1_0.accepting_patients,
+        hd1_0.available,
+        hd1_0.available_beds,
+        hd1_0.available_doctors,
+        hd1_0.emergency_service,
+        hd1_0.hospital_id,
+        hd1_0.name,
+        hd1_0.total_beds,
+        hd1_0.total_doctors 
+    from
+        hospital_departments hd1_0 
+    where
+        hd1_0.hospital_id=? 
+        and hd1_0.name=?
+Hibernate: 
+    select
+        hd1_0.id,
+        hd1_0.accepting_patients,
+        hd1_0.available,
+        hd1_0.available_beds,
+        hd1_0.available_doctors,
+        hd1_0.emergency_service,
+        hd1_0.hospital_id,
+        hd1_0.name,
+        hd1_0.total_beds,
+        hd1_0.total_doctors 
+    from
+        hospital_departments hd1_0 
+    where
+        hd1_0.hospital_id=? 
+        and hd1_0.name=?
+Hibernate: 
+    select
+        hd1_0.id,
+        hd1_0.accepting_patients,
+        hd1_0.available,
+        hd1_0.available_beds,
+        hd1_0.available_doctors,
+        hd1_0.emergency_service,
+        hd1_0.hospital_id,
+        hd1_0.name,
+        hd1_0.total_beds,
+        hd1_0.total_doctors 
+    from
+        hospital_departments hd1_0 
+    where
+        hd1_0.hospital_id=? 
+        and hd1_0.name=?
+Hibernate: 
+    select
+        hd1_0.id,
+        hd1_0.accepting_patients,
+        hd1_0.available,
+        hd1_0.available_beds,
+        hd1_0.available_doctors,
+        hd1_0.emergency_service,
+        hd1_0.hospital_id,
+        hd1_0.name,
+        hd1_0.total_beds,
+        hd1_0.total_doctors 
+    from
+        hospital_departments hd1_0 
+    where
+        hd1_0.hospital_id=? 
+        and hd1_0.name=?
+Hibernate: 
+    select
+        hd1_0.id,
+        hd1_0.accepting_patients,
+        hd1_0.available,
+        hd1_0.available_beds,
+        hd1_0.available_doctors,
+        hd1_0.emergency_service,
+        hd1_0.hospital_id,
+        hd1_0.name,
+        hd1_0.total_beds,
+        hd1_0.total_doctors 
+    from
+        hospital_departments hd1_0 
+    where
+        hd1_0.hospital_id=? 
+        and hd1_0.name=?
+Hibernate: 
+    insert 
+    into
+        emergency_requests
+        (accepted_at, ambulance_dispatched, ambulance_id, assigned_at, cancelled, completed_at, created_at, detected_vitals, doctor_id, hospital_id, latitude, longitude, patient_uid, required_department, requires_ambulance, risk_score, severity, sms_sent, status, symptom_description, symptoms) 
+    values
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    insert 
+    into
+        emergency_events
+        (description, emergency_id, status, timestamp) 
+    values
+        (?, ?, ?, ?)
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    update
+        emergency_requests 
+    set
+        accepted_at=?,
+        ambulance_dispatched=?,
+        ambulance_id=?,
+        assigned_at=?,
+        cancelled=?,
+        completed_at=?,
+        created_at=?,
+        detected_vitals=?,
+        doctor_id=?,
+        hospital_id=?,
+        latitude=?,
+        longitude=?,
+        patient_uid=?,
+        required_department=?,
+        requires_ambulance=?,
+        risk_score=?,
+        severity=?,
+        sms_sent=?,
+        status=?,
+        symptom_description=?,
+        symptoms=? 
+    where
+        id=?
+Hibernate: 
+    update
+        hospitals 
+    set
+        available_beds=?,
+        available_doctors=?,
+        lat=?,
+        lng=?,
+        name=?,
+        rating=?,
+        total_beds=?,
+        total_doctors=? 
+    where
+        id=?
+Hibernate: 
+    insert 
+    into
+        emergency_events
+        (description, emergency_id, status, timestamp) 
+    values
+        (?, ?, ?, ?)
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        er1_0.id,
+        er1_0.accepted_at,
+        er1_0.ambulance_dispatched,
+        er1_0.ambulance_id,
+        er1_0.assigned_at,
+        er1_0.cancelled,
+        er1_0.completed_at,
+        er1_0.created_at,
+        er1_0.detected_vitals,
+        er1_0.doctor_id,
+        er1_0.hospital_id,
+        er1_0.latitude,
+        er1_0.longitude,
+        er1_0.patient_uid,
+        er1_0.required_department,
+        er1_0.requires_ambulance,
+        er1_0.risk_score,
+        er1_0.severity,
+        er1_0.sms_sent,
+        er1_0.status,
+        er1_0.symptom_description,
+        er1_0.symptoms 
+    from
+        emergency_requests er1_0 
+    where
+        er1_0.hospital_id=? 
+        and er1_0.status in (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        h1_0.id,
+        h1_0.available_beds,
+        h1_0.available_doctors,
+        h1_0.lat,
+        h1_0.lng,
+        h1_0.name,
+        h1_0.rating,
+        h1_0.total_beds,
+        h1_0.total_doctors 
+    from
+        hospitals h1_0
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospital_departments d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.available_for_emergency,
+        d1_0.department_name,
+        d1_0.name,
+        d1_0.on_duty,
+        d1_0.phone,
+        d1_0.specialization 
+    from
+        doctors d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.available_for_emergency,
+        d1_0.department_name,
+        d1_0.name,
+        d1_0.on_duty,
+        d1_0.phone,
+        d1_0.specialization 
+    from
+        doctors d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.available_for_emergency,
+        d1_0.department_name,
+        d1_0.name,
+        d1_0.on_duty,
+        d1_0.phone,
+        d1_0.specialization 
+    from
+        doctors d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.available_for_emergency,
+        d1_0.department_name,
+        d1_0.name,
+        d1_0.on_duty,
+        d1_0.phone,
+        d1_0.specialization 
+    from
+        doctors d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.available_for_emergency,
+        d1_0.department_name,
+        d1_0.name,
+        d1_0.on_duty,
+        d1_0.phone,
+        d1_0.specialization 
+    from
+        doctors d1_0 
+    where
+        d1_0.hospital_id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        er1_0.id,
+        er1_0.accepted_at,
+        er1_0.ambulance_dispatched,
+        er1_0.ambulance_id,
+        er1_0.assigned_at,
+        er1_0.cancelled,
+        er1_0.completed_at,
+        er1_0.created_at,
+        er1_0.detected_vitals,
+        er1_0.doctor_id,
+        er1_0.hospital_id,
+        er1_0.latitude,
+        er1_0.longitude,
+        er1_0.patient_uid,
+        er1_0.required_department,
+        er1_0.requires_ambulance,
+        er1_0.risk_score,
+        er1_0.severity,
+        er1_0.sms_sent,
+        er1_0.status,
+        er1_0.symptom_description,
+        er1_0.symptoms 
+    from
+        emergency_requests er1_0 
+    where
+        er1_0.status in (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+Hibernate: 
+    select
+        h1_0.id,
+        h1_0.available_beds,
+        h1_0.available_doctors,
+        h1_0.lat,
+        h1_0.lng,
+        h1_0.name,
+        h1_0.rating,
+        h1_0.total_beds,
+        h1_0.total_doctors,
+        d1_0.hospital_id,
+        d1_0.id,
+        d1_0.accepting_patients,
+        d1_0.available,
+        d1_0.available_beds,
+        d1_0.available_doctors,
+        d1_0.emergency_service,
+        d1_0.name,
+        d1_0.total_beds,
+        d1_0.total_doctors 
+    from
+        hospitals h1_0 
+    left join
+        hospital_departments d1_0 
+            on h1_0.id=d1_0.hospital_id 
+    where
+        h1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        er1_0.id,
+        er1_0.accepted_at,
+        er1_0.ambulance_dispatched,
+        er1_0.ambulance_id,
+        er1_0.assigned_at,
+        er1_0.cancelled,
+        er1_0.completed_at,
+        er1_0.created_at,
+        er1_0.detected_vitals,
+        er1_0.doctor_id,
+        er1_0.hospital_id,
+        er1_0.latitude,
+        er1_0.longitude,
+        er1_0.patient_uid,
+        er1_0.required_department,
+        er1_0.requires_ambulance,
+        er1_0.risk_score,
+        er1_0.severity,
+        er1_0.sms_sent,
+        er1_0.status,
+        er1_0.symptom_description,
+        er1_0.symptoms 
+    from
+        emergency_requests er1_0 
+    where
+        er1_0.id=?
+Hibernate: 
+    select
+        ee1_0.id,
+        ee1_0.description,
+        ee1_0.emergency_id,
+        ee1_0.status,
+        ee1_0.timestamp 
+    from
+        emergency_events ee1_0 
+    where
+        ee1_0.emergency_id=? 
+    order by
+        ee1_0.timestamp
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        er1_0.id,
+        er1_0.accepted_at,
+        er1_0.ambulance_dispatched,
+        er1_0.ambulance_id,
+        er1_0.assigned_at,
+        er1_0.cancelled,
+        er1_0.completed_at,
+        er1_0.created_at,
+        er1_0.detected_vitals,
+        er1_0.doctor_id,
+        er1_0.hospital_id,
+        er1_0.latitude,
+        er1_0.longitude,
+        er1_0.patient_uid,
+        er1_0.required_department,
+        er1_0.requires_ambulance,
+        er1_0.risk_score,
+        er1_0.severity,
+        er1_0.sms_sent,
+        er1_0.status,
+        er1_0.symptom_description,
+        er1_0.symptoms 
+    from
+        emergency_requests er1_0 
+    where
+        er1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        er1_0.id,
+        er1_0.accepted_at,
+        er1_0.ambulance_dispatched,
+        er1_0.ambulance_id,
+        er1_0.assigned_at,
+        er1_0.cancelled,
+        er1_0.completed_at,
+        er1_0.created_at,
+        er1_0.detected_vitals,
+        er1_0.doctor_id,
+        er1_0.hospital_id,
+        er1_0.latitude,
+        er1_0.longitude,
+        er1_0.patient_uid,
+        er1_0.required_department,
+        er1_0.requires_ambulance,
+        er1_0.risk_score,
+        er1_0.severity,
+        er1_0.sms_sent,
+        er1_0.status,
+        er1_0.symptom_description,
+        er1_0.symptoms 
+    from
+        emergency_requests er1_0 
+    where
+        er1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        fm1_0.user_id,
+        fm1_0.id,
+        fm1_0.name,
+        fm1_0.phone,
+        fm1_0.relationship 
+    from
+        family_members fm1_0 
+    where
+        fm1_0.user_id=?
+Hibernate: 
+    select
+        fr1_0.family_user_id,
+        fr1_0.id,
+        fr1_0.active,
+        fr1_0.contact_phone,
+        fr1_0.created_at,
+        fr1_0.emergency_contact,
+        fr1_0.patient_id,
+        fr1_0.relationship,
+        fr1_0.updated_at 
+    from
+        patient_family_relationships fr1_0 
+    where
+        fr1_0.family_user_id=?
+Hibernate: 
+    select
+        pr1_0.patient_id,
+        pr1_0.id,
+        pr1_0.active,
+        pr1_0.contact_phone,
+        pr1_0.created_at,
+        pr1_0.emergency_contact,
+        pr1_0.family_user_id,
+        pr1_0.relationship,
+        pr1_0.updated_at 
+    from
+        patient_family_relationships pr1_0 
+    where
+        pr1_0.patient_id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    update
+        users 
+    set
+        address=?,
+        age=?,
+        ambulance_id=?,
+        blood_group=?,
+        doctor_hospital=?,
+        doctor_name=?,
+        doctor_phone=?,
+        email=?,
+        fcm_token=?,
+        full_name=?,
+        hospital_id=?,
+        latitude=?,
+        longitude=?,
+        password=?,
+        role=?,
+        uid=? 
+    where
+        id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.address,
+        u1_0.age,
+        u1_0.ambulance_id,
+        u1_0.blood_group,
+        u1_0.doctor_hospital,
+        u1_0.doctor_name,
+        u1_0.doctor_phone,
+        u1_0.email,
+        u1_0.fcm_token,
+        u1_0.full_name,
+        u1_0.hospital_id,
+        u1_0.latitude,
+        u1_0.longitude,
+        u1_0.password,
+        u1_0.role,
+        u1_0.uid 
+    from
+        users u1_0 
+    where
+        u1_0.uid=?
+Hibernate: 
+    select
+        fm1_0.user_id,
+        fm1_0.id,
+        fm1_0.name,
+        fm1_0.phone,
+        fm1_0.relationship 
+    from
+        family_members fm1_0 
+    where
+        fm1_0.user_id=?
+Hibernate: 
+    select
+        fr1_0.family_user_id,
+        fr1_0.id,
+        fr1_0.active,
+        fr1_0.contact_phone,
+        fr1_0.created_at,
+        fr1_0.emergency_contact,
+        fr1_0.patient_id,
+        fr1_0.relationship,
+        fr1_0.updated_at 
+    from
+        patient_family_relationships fr1_0 
+    where
+        fr1_0.family_user_id=?
+Hibernate: 
+    select
+        pr1_0.patient_id,
+        pr1_0.id,
+        pr1_0.active,
+        pr1_0.contact_phone,
+        pr1_0.created_at,
+        pr1_0.emergency_contact,
+        pr1_0.family_user_id,
+        pr1_0.relationship,
+        pr1_0.updated_at 
+    from
+        patient_family_relationships pr1_0 
+    where
+        pr1_0.patient_id=?
+2026-10-07T20:27:43.835+05:30  INFO 9093 --- [backend-java] [ionShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+2026-10-07T20:27:43.841+05:30  INFO 9093 --- [backend-java] [tomcat-shutdown] o.s.boot.tomcat.GracefulShutdown         : Graceful shutdown complete
+2026-10-07T20:27:43.843+05:30  INFO 9093 --- [backend-java] [ionShutdownHook] o.s.m.s.b.SimpleBrokerMessageHandler     : Stopping...
+2026-10-07T20:27:43.843+05:30  INFO 9093 --- [backend-java] [ionShutdownHook] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@5084cf1c]]
+2026-10-07T20:27:43.843+05:30  INFO 9093 --- [backend-java] [ionShutdownHook] o.s.m.s.b.SimpleBrokerMessageHandler     : Stopped.
+2026-10-07T20:27:43.847+05:30  INFO 9093 --- [backend-java] [ionShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-10-07T20:27:43.849+05:30  INFO 9093 --- [backend-java] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-10-07T20:27:43.852+05:30  INFO 9093 --- [backend-java] [ionShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

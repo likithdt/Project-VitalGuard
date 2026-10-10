@@ -1,0 +1,7 @@
+numpy
+requests
+python-dotenv
+flask
+scikit-learn
+joblib
+websocket-client

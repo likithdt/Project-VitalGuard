@@ -1,0 +1,11 @@
+VitalGuard AI Deterioration Model Report
+----------------------------------------
+Model Type: Random Forest Classifier
+Dataset: Synthetic Patients Cohort (2000 samples)
+Train/Test Split: 80/20
+
+Accuracy:  0.9825
+Precision: 0.9933
+Recall:    0.9610
+F1-Score:  0.9769
+ROC-AUC:   0.9964

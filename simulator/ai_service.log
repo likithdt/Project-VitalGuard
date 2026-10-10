@@ -1,0 +1,58 @@
+/Users/bhat/Vital guard/vital-java/simulator/venv/lib/python3.12/site-packages/sklearn/base.py:525: InconsistentVersionWarning: Trying to unpickle estimator DecisionTreeClassifier from version 1.9.0 when using version 1.9.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+/Users/bhat/Vital guard/vital-java/simulator/venv/lib/python3.12/site-packages/sklearn/base.py:525: InconsistentVersionWarning: Trying to unpickle estimator RandomForestClassifier from version 1.9.0 when using version 1.9.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+[AI SERVICE] Loaded Random Forest model from ai_model/model.pkl
+ * Serving Flask app 'ai_service'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8001
+ * Running on http://192.168.0.9:8001
+[33mPress CTRL+C to quit[0m
+127.0.0.1 - - [23/Sep/2026 20:33:15] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [23/Sep/2026 20:33:37] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [23/Sep/2026 20:33:37] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [23/Sep/2026 20:33:37] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [23/Sep/2026 20:33:37] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [23/Sep/2026 20:33:37] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [23/Sep/2026 20:33:37] "POST /predict HTTP/1.1" 200 -
+/Users/bhat/Vital guard/vital-java/simulator/venv/lib/python3.12/site-packages/sklearn/base.py:525: InconsistentVersionWarning: Trying to unpickle estimator DecisionTreeClassifier from version 1.9.0 when using version 1.9.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+/Users/bhat/Vital guard/vital-java/simulator/venv/lib/python3.12/site-packages/sklearn/base.py:525: InconsistentVersionWarning: Trying to unpickle estimator RandomForestClassifier from version 1.9.0 when using version 1.9.1. This might lead to breaking code or invalid results. Use at your own risk. For more info please refer to:
+https://scikit-learn.org/stable/model_persistence.html#security-maintainability-limitations
+  warnings.warn(
+[AI SERVICE] Loaded Random Forest model from ai_model/model.pkl
+ * Serving Flask app 'ai_service'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8001
+ * Running on http://192.0.0.2:8001
+[33mPress CTRL+C to quit[0m
+127.0.0.1 - - [28/Sep/2026 09:42:56] "[31m[1mGET /predict HTTP/1.1[0m" 405 -
+127.0.0.1 - - [28/Sep/2026 09:43:10] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:43:10] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:43:10] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:43:10] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:43:10] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:43:10] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:44:43] "[31m[1mGET /predict HTTP/1.1[0m" 405 -
+127.0.0.1 - - [28/Sep/2026 09:44:57] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:44:57] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:44:57] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:44:57] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:44:57] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:44:57] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:52:18] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:52:20] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 09:52:23] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 10:38:09] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 10:38:12] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 10:38:14] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 10:39:03] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 10:39:05] "POST /predict HTTP/1.1" 200 -
+127.0.0.1 - - [28/Sep/2026 10:39:07] "POST /predict HTTP/1.1" 200 -

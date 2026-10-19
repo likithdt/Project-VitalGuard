@@ -7,6 +7,15 @@ import * as AuthContext from '../context/AuthContext';
 import API from '../services/api';
 
 vi.mock('../services/api');
+vi.mock('../components/GoogleMapTracking', () => ({
+  default: (props) => (
+    <div data-testid="mock-google-map-tracking">
+      <span>Mock Map Tracking</span>
+      <span>Emergency: {props.emergencyId}</span>
+      <span>Status: {props.ambulanceStatus}</span>
+    </div>
+  )
+}));
 
 describe('AdminDashboard Component', () => {
   beforeEach(() => {
@@ -78,10 +87,64 @@ describe('AdminDashboard Component', () => {
         return Promise.resolve({ data: [] });
       }
       if (path === '/admin/emergencies/active') {
-        return Promise.resolve({ data: [] });
+        return Promise.resolve({
+          data: [
+            {
+              id: 99,
+              patientUid: 'PAT_99',
+              patientName: 'Jane Foster',
+              severity: 'CRITICAL',
+              riskScore: 94,
+              status: 'AMBULANCE_REQUESTED',
+              symptoms: 'Acute chest compression & shortness of breath',
+              heartRate: 118,
+              oxygenLevel: 89,
+              bloodPressure: '155/98',
+              respiratoryRate: 26,
+              patientLatitude: 12.9345,
+              patientLongitude: 77.6101,
+              hospital: { id: 1, name: 'Apollo Hospital', availableBeds: 14, totalBeds: 100 },
+              hospitalId: 1,
+              doctor: { id: 1, name: 'Dr. Anirudh Kulkarni', specialization: 'Cardiology' },
+              doctorId: 1,
+              ambulance: { id: 1, unitId: 'AMB-01', status: 'EN_ROUTE_TO_PATIENT', driver: { fullName: 'Driver John' } },
+              ambulanceId: 1,
+              createdAt: '2026-10-19T10:00:00Z',
+              updatedAt: '2026-10-19T10:05:00Z'
+            },
+            // Duplicate record with the same ID to verify frontend deduplication
+            {
+              id: 99,
+              patientUid: 'PAT_99',
+              patientName: 'Jane Foster',
+              severity: 'CRITICAL',
+              riskScore: 94,
+              status: 'AMBULANCE_REQUESTED',
+              symptoms: 'Acute chest compression & shortness of breath',
+              heartRate: 118,
+              oxygenLevel: 89,
+              bloodPressure: '155/98',
+              respiratoryRate: 26,
+              patientLatitude: 12.9345,
+              patientLongitude: 77.6101,
+              hospital: { id: 1, name: 'Apollo Hospital', availableBeds: 14, totalBeds: 100 },
+              hospitalId: 1
+            }
+          ]
+        });
+      }
+      if (path.includes('/timeline')) {
+        return Promise.resolve({
+          data: [
+            { timestamp: '2026-10-19T10:00:00Z', event: 'EMERGENCY_DETECTED', description: 'Patient triggered SOS', actor: 'PAT_99' },
+            { timestamp: '2026-10-19T10:01:00Z', event: 'HOSPITAL_ASSIGNED', description: 'Apollo Hospital assigned', actor: 'SYSTEM' }
+          ]
+        });
       }
       return Promise.resolve({ data: [] });
     });
+
+    API.post.mockResolvedValue({ data: { success: true } });
   });
 
   it('renders System Administration Portal with metric cards and tabs', async () => {
@@ -167,6 +230,73 @@ describe('AdminDashboard Component', () => {
     await waitFor(() => {
       expect(screen.getByText(/Register Verified Doctor/i)).toBeDefined();
       expect(screen.getByPlaceholderText(/e\.g\. Dr\. Ramesh Babu/i)).toBeDefined();
+    });
+  });
+
+  it('displays synchronized real-time emergencies in Incident Command Center and deduplicates cards', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin?tab=emergencies']}>
+        <AdminDashboard defaultTab="emergencies" />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Global Incident Command Center & Real-Time Dispatch/i)).toBeDefined();
+      expect(screen.getByText(/Active Incidents Queue \(1\)/i)).toBeDefined();
+      expect(screen.getByText('Jane Foster')).toBeDefined();
+    });
+
+    // Check patient telemetry
+    expect(screen.getAllByText(/118/).length).toBeGreaterThan(0); // Heart rate
+    expect(screen.getAllByText(/89/).length).toBeGreaterThan(0); // SpO2
+    expect(screen.getAllByText(/155\/98/).length).toBeGreaterThan(0); // Blood pressure
+
+    // Check map tracking component
+    expect(screen.getByTestId('mock-google-map-tracking')).toBeDefined();
+    expect(screen.getByText(/Emergency: 99/i)).toBeDefined();
+  });
+
+  it('provides administrative action controls to resolve emergency, cancel emergency, and dispatch', async () => {
+    render(
+      <MemoryRouter initialEntries={['/admin?tab=emergencies']}>
+        <AdminDashboard defaultTab="emergencies" />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Incident Command: SOS-99/i)).toBeDefined();
+    });
+
+    // 1. Resolve Incident
+    const resolveBtn = screen.getByText(/✓ Resolve Incident/i);
+    fireEvent.click(resolveBtn);
+    await waitFor(() => {
+      expect(API.post).toHaveBeenCalledWith('/emergencies/99/resolve');
+    });
+
+    // 2. Cancel Incident Modal
+    const cancelBtn = screen.getByText(/✕ Cancel Incident/i);
+    fireEvent.click(cancelBtn);
+    await waitFor(() => {
+      expect(screen.getByText(/Are you sure you want to cancel this emergency request\?/i)).toBeDefined();
+    });
+
+    // Acknowledge active units warning checkbox and confirm
+    const checkbox = screen.getByRole('checkbox');
+    fireEvent.click(checkbox);
+
+    const confirmCancelBtn = screen.getByText(/Confirm Cancellation/i);
+    fireEvent.click(confirmCancelBtn);
+    await waitFor(() => {
+      expect(API.post).toHaveBeenCalledWith('/emergency/99/cancel');
+    });
+
+    // 3. Hospital Override / Architecture Details Modal
+    const hospBtn = screen.getByText(/🏥 Hospital Details \/ Override/i);
+    fireEvent.click(hospBtn);
+    await waitFor(() => {
+      expect(screen.getByText(/Automated Clinical Triage & Architectural Contract/i)).toBeDefined();
+      expect(screen.getByText(/PATCH \/api\/admin\/emergencies\/\{id\}\/hospital/i)).toBeDefined();
     });
   });
 });

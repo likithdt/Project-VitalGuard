@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../services/api';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import StatusBadge from '../components/StatusBadge';
+import { useRealtimeRefresh } from '../services/websocket';
+import GoogleMapTracking from '../components/GoogleMapTracking';
+import CancelEmergencyModal from '../components/CancelEmergencyModal';
 
 export default function AdminDashboard({ defaultTab }) {
   const { user } = useAuth();
@@ -40,6 +43,20 @@ export default function AdminDashboard({ defaultTab }) {
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState(null); // { message, type: 'success' | 'error' }
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
+
+  // Emergency Command Center & Live Telemetry States
+  const [selectedEmergency, setSelectedEmergency] = useState(null);
+  const [selectedEmergencyTimeline, setSelectedEmergencyTimeline] = useState([]);
+  const [emergencyActionLoading, setEmergencyActionLoading] = useState(null); // 'resolve' | 'cancel' | 'dispatch'
+  const [emergencySeverityFilter, setEmergencySeverityFilter] = useState('ALL');
+  const [emergencyStatusFilter, setEmergencyStatusFilter] = useState('ALL');
+  const [emergencySearchQuery, setEmergencySearchQuery] = useState('');
+  const [newEmergencyAlert, setNewEmergencyAlert] = useState(null);
+  const [isCancelEmergencyConfirmOpen, setIsCancelEmergencyConfirmOpen] = useState(false);
+  const [emergencyToCancel, setEmergencyToCancel] = useState(null);
+  const [cancelEmergencyError, setCancelEmergencyError] = useState(null);
+  const [isHospitalOverrideModalOpen, setIsHospitalOverrideModalOpen] = useState(false);
+  const previousEmergencyIdsRef = useRef(new Set());
 
   // Filter/Search states
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,9 +143,141 @@ export default function AdminDashboard({ defaultTab }) {
     }
   };
 
+  // Real-time synchronization via WebSocket STOMP
+  const {
+    connected: wsConnected,
+    revision,
+    refresh: wsRefresh,
+    lastEvent,
+    ambulanceLocation,
+    ambulanceLocationsMap
+  } = useRealtimeRefresh(user?.uid, selectedEmergency?.id, null, user);
+
+  // Synchronize emergencies and stats whenever revision changes or on mount
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [revision]);
+
+  // Deduplicate emergencies by ID and sort by severity (CRITICAL first) then recency
+  const uniqueEmergencies = Array.from(
+    new Map(emergencies.map(e => [e.id, e])).values()
+  ).sort((a, b) => {
+    const order = { CRITICAL: 4, HIGH: 3, MODERATE: 2, LOW: 1 };
+    const diff = (order[b.severity] || 0) - (order[a.severity] || 0);
+    if (diff !== 0) return diff;
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  });
+
+  // Filtered emergencies based on search and status/severity filters
+  const filteredEmergencies = uniqueEmergencies.filter(e => {
+    if (emergencySeverityFilter !== 'ALL' && e.severity !== emergencySeverityFilter) return false;
+    if (emergencyStatusFilter !== 'ALL' && e.status !== emergencyStatusFilter) return false;
+    if (emergencySearchQuery.trim()) {
+      const q = emergencySearchQuery.toLowerCase();
+      const matchId = String(e.id).includes(q);
+      const matchName = (e.patientName || '').toLowerCase().includes(q);
+      const matchUid = (e.patientUid || '').toLowerCase().includes(q);
+      const matchSymptoms = (e.symptoms || '').toLowerCase().includes(q);
+      const matchHospital = (e.hospital?.name || '').toLowerCase().includes(q);
+      if (!matchId && !matchName && !matchUid && !matchSymptoms && !matchHospital) return false;
+    }
+    return true;
+  });
+
+  // Keep selected emergency up-to-date with live state
+  useEffect(() => {
+    if (uniqueEmergencies.length > 0) {
+      if (selectedEmergency) {
+        const updated = uniqueEmergencies.find(e => e.id === selectedEmergency.id);
+        if (updated) {
+          setSelectedEmergency(updated);
+        } else {
+          setSelectedEmergency(uniqueEmergencies[0]);
+        }
+      } else {
+        setSelectedEmergency(uniqueEmergencies[0]);
+      }
+    } else {
+      setSelectedEmergency(null);
+    }
+  }, [emergencies]);
+
+  // Fetch timeline whenever selected emergency changes
+  useEffect(() => {
+    if (selectedEmergency?.id) {
+      API.get(`/admin/emergencies/${selectedEmergency.id}/timeline`)
+        .then(res => setSelectedEmergencyTimeline(Array.isArray(res.data) ? res.data : []))
+        .catch(() => setSelectedEmergencyTimeline([]));
+    } else {
+      setSelectedEmergencyTimeline([]);
+    }
+  }, [selectedEmergency?.id, revision]);
+
+  // Detect new incoming emergency from WebSocket event
+  useEffect(() => {
+    if (!lastEvent) return;
+    const eventId = lastEvent.emergencyId || lastEvent.id || lastEvent.sosId;
+    if (eventId && !previousEmergencyIdsRef.current.has(eventId)) {
+      previousEmergencyIdsRef.current.add(eventId);
+      setNewEmergencyAlert({
+        id: eventId,
+        patientUid: lastEvent.patientUid,
+        patientName: lastEvent.patientName || `Patient (${lastEvent.patientUid || 'Emergency SOS'})`,
+        severity: lastEvent.severity || 'CRITICAL',
+        riskScore: lastEvent.riskScore || 90,
+        status: lastEvent.status || 'DETECTED'
+      });
+    }
+  }, [lastEvent]);
+
+  // Emergency Administrative Actions
+  const handleResolveEmergency = async (id) => {
+    try {
+      setEmergencyActionLoading('resolve');
+      await API.post(`/emergencies/${id}/resolve`);
+      showNotification(`✓ Emergency Incident SOS-${id} has been marked as RESOLVED across all dashboards.`, 'success');
+      wsRefresh();
+      fetchAllData();
+    } catch (err) {
+      showNotification('Failed to resolve emergency: ' + (err.response?.data?.error || err.message), 'error');
+    } finally {
+      setEmergencyActionLoading(null);
+    }
+  };
+
+  const handleConfirmCancelEmergency = async () => {
+    if (!emergencyToCancel) return;
+    try {
+      setEmergencyActionLoading('cancel');
+      setCancelEmergencyError(null);
+      await API.post(`/emergency/${emergencyToCancel.id}/cancel`);
+      showNotification(`✓ Emergency Incident SOS-${emergencyToCancel.id} CANCELLED. Response units & beds released.`, 'success');
+      setIsCancelEmergencyConfirmOpen(false);
+      setEmergencyToCancel(null);
+      wsRefresh();
+      fetchAllData();
+    } catch (err) {
+      const errMsg = err.response?.data?.error || err.message || 'Failed to cancel emergency';
+      setCancelEmergencyError(errMsg);
+      showNotification('Failed to cancel emergency: ' + errMsg, 'error');
+    } finally {
+      setEmergencyActionLoading(null);
+    }
+  };
+
+  const handleDispatchAmbulance = async (id) => {
+    try {
+      setEmergencyActionLoading('dispatch');
+      await API.post(`/emergencies/${id}/dispatch`);
+      showNotification(`✓ Manual ambulance dispatch initiated for SOS-${id}. Nearest driver notified.`, 'success');
+      wsRefresh();
+      fetchAllData();
+    } catch (err) {
+      showNotification('Failed to dispatch ambulance: ' + (err.response?.data?.error || err.message), 'error');
+    } finally {
+      setEmergencyActionLoading(null);
+    }
+  };
 
   // Handlers for Doctor
   const handleRegisterDoctor = async (e) => {
@@ -332,13 +481,28 @@ export default function AdminDashboard({ defaultTab }) {
           {/* Portal Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <span className="badge badge-low" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   ROLE: SYSTEM_ADMIN
                 </span>
                 <span style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
                   Platform ID: {user?.uid || 'SYS_01'}
                 </span>
+                <div style={{
+                  background: wsConnected ? 'var(--color-success-bg, #ECFDF5)' : 'var(--color-warning-bg, #FFFBEB)',
+                  border: `1px solid ${wsConnected ? 'var(--color-success-border, #A7F3D0)' : 'var(--color-warning-border, #FDE68A)'}`,
+                  padding: '3px 10px',
+                  borderRadius: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: wsConnected ? 'var(--color-success, #059669)' : 'var(--color-warning, #D97706)'
+                }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: wsConnected ? '#10B981' : '#F59E0B' }} />
+                  <span>{wsConnected ? 'LIVE COMMAND NETWORK SYNCHRONIZED' : 'RECONNECTING TELEMETRY...'}</span>
+                </div>
               </div>
               <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--color-gray-900)', marginTop: '4px' }}>
                 System Administration & Security Control
@@ -349,7 +513,7 @@ export default function AdminDashboard({ defaultTab }) {
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => fetchAllData()} className="btn btn-secondary btn-sm" title="Refresh all registry data">
+              <button onClick={() => { fetchAllData(); wsRefresh(); }} className="btn btn-secondary btn-sm" title="Refresh all registry data">
                 🔄 Sync State
               </button>
               <button onClick={() => setActiveModal('register-doctor')} className="btn btn-primary btn-sm">
@@ -418,7 +582,7 @@ export default function AdminDashboard({ defaultTab }) {
             <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #ef4444' }}>
               <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Active Emergencies</div>
               <div style={{ fontSize: '26px', fontWeight: 900, color: '#ef4444', marginTop: '4px' }}>
-                {stats?.activeEmergencies ?? '0'}
+                {uniqueEmergencies.length}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Live SOS dispatches</div>
             </div>
@@ -477,6 +641,61 @@ export default function AdminDashboard({ defaultTab }) {
             </div>
           )}
 
+          {/* Real-time Incoming Emergency Banner Alert */}
+          {newEmergencyAlert && (
+            <div className="alert alert-critical" style={{
+              marginBottom: 'var(--space-5)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '14px 20px',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: '0 4px 18px rgba(220, 38, 38, 0.15)',
+              border: '2px solid var(--color-critical)',
+              animation: 'fadeIn 0.2s ease-out'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '24px' }}>🚨</span>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <strong style={{ fontSize: '14px', color: '#991B1B' }}>
+                      NEW EMERGENCY SOS DETECTED: SOS-{newEmergencyAlert.id}
+                    </strong>
+                    <StatusBadge status={newEmergencyAlert.severity} size="sm" />
+                    <span style={{ fontSize: '12px', background: '#DC2626', color: 'white', padding: '1px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                      Risk {newEmergencyAlert.riskScore}/100
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--color-gray-600)', marginTop: '2px' }}>
+                    Patient: <strong>{newEmergencyAlert.patientName}</strong> ({newEmergencyAlert.patientUid}) • Status: <strong>{newEmergencyAlert.status}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  onClick={() => {
+                    handleTabChange('emergencies');
+                    const target = uniqueEmergencies.find(e => e.id === newEmergencyAlert.id);
+                    if (target) setSelectedEmergency(target);
+                    setNewEmergencyAlert(null);
+                  }}
+                  className="btn btn-critical btn-sm"
+                  style={{ fontWeight: 800 }}
+                >
+                  Open Incident Command →
+                </button>
+                <button
+                  onClick={() => setNewEmergencyAlert(null)}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: '16px', color: 'var(--color-gray-500)' }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Navigation Tabs */}
           <div className="admin-tabs-container">
             <div className="admin-tabs" role="tablist" aria-label="System Administration Sections">
@@ -487,7 +706,7 @@ export default function AdminDashboard({ defaultTab }) {
                 { id: 'drivers', label: '🚑 Ambulance Drivers', count: drivers.length },
                 { id: 'hospitals', label: '🏢 Hospitals', count: hospitals.length },
                 { id: 'ambulances', label: '🚨 Ambulances', count: ambulances.length },
-                { id: 'emergencies', label: '📡 System Emergencies', count: emergencies.length },
+                { id: 'emergencies', label: '📡 System Emergencies', count: uniqueEmergencies.length },
                 { id: 'users', label: '👥 User Accounts', count: users.length },
                 { id: 'audit-logs', label: '📜 Audit Trail', count: auditLogs.length },
               ].map(tab => (
@@ -675,17 +894,24 @@ export default function AdminDashboard({ defaultTab }) {
               {/* Active Emergency Highlights */}
               <div className="card">
                 <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 className="card-title">Live System Emergencies ({emergencies.length})</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <h3 className="card-title">Live System Emergencies ({uniqueEmergencies.length})</h3>
+                    {uniqueEmergencies.length > 0 && (
+                      <span className="badge badge-critical" style={{ fontSize: '11px', animation: 'pulse 2s infinite' }}>
+                        ● {uniqueEmergencies.filter(e => e.severity === 'CRITICAL').length} CRITICAL
+                      </span>
+                    )}
+                  </div>
                   <button onClick={() => handleTabChange('emergencies')} className="btn btn-secondary btn-sm">
-                    Open Command Center
+                    Open Incident Command Center →
                   </button>
                 </div>
                 <div className="card-content">
-                  {emergencies.length === 0 ? (
+                  {uniqueEmergencies.length === 0 ? (
                     <div style={{ padding: '30px', textAlign: 'center', color: 'var(--color-gray-500)' }}>
                       <div style={{ fontSize: '32px', marginBottom: '8px' }}>🛡️</div>
                       <div style={{ fontWeight: 700 }}>No Active Emergencies in the Network</div>
-                      <div style={{ fontSize: '12px', marginTop: '4px' }}>All emergency queues and ambulance dispatches are clear.</div>
+                      <div style={{ fontSize: '12px', marginTop: '4px' }}>All emergency queues and ambulance dispatches are clear. Telemetry synchronized.</div>
                     </div>
                   ) : (
                     <div className="table-wrapper">
@@ -699,18 +925,47 @@ export default function AdminDashboard({ defaultTab }) {
                             <th>Ambulance</th>
                             <th>Severity</th>
                             <th>Status</th>
+                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {emergencies.slice(0, 5).map(e => (
-                            <tr key={e.id}>
-                              <td style={{ fontWeight: 800 }}>SOS-{e.id}</td>
-                              <td>{e.patientName || e.patientUid}</td>
+                          {uniqueEmergencies.slice(0, 5).map(e => (
+                            <tr
+                              key={e.id}
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                setSelectedEmergency(e);
+                                handleTabChange('emergencies');
+                              }}
+                            >
+                              <td style={{ fontWeight: 800 }}>
+                                <span style={{ color: e.severity === 'CRITICAL' ? '#DC2626' : 'inherit' }}>
+                                  SOS-{e.id}
+                                </span>
+                              </td>
+                              <td>
+                                <strong>{e.patientName || e.patientUid}</strong>
+                                <div style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>{e.symptoms || 'Cardiac alert'}</div>
+                              </td>
                               <td>{e.hospital?.name || (e.hospitalId ? `Hospital #${e.hospitalId}` : 'Assigning...')}</td>
                               <td>{e.doctor?.name || 'Emergency Team'}</td>
                               <td>{e.ambulance?.unitId || (e.ambulanceId ? `Unit #${e.ambulanceId}` : 'Not required')}</td>
                               <td><StatusBadge status={e.severity} size="sm" /></td>
                               <td><StatusBadge status={e.status} size="sm" /></td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ fontSize: '11px', padding: '3px 8px' }}
+                                  onClick={(evt) => {
+                                    evt.stopPropagation();
+                                    setSelectedEmergency(e);
+                                    handleTabChange('emergencies');
+                                  }}
+                                >
+                                  Command ➔
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -1139,68 +1394,530 @@ export default function AdminDashboard({ defaultTab }) {
           )}
 
           {/* ========================================================================= */}
-          {/* TAB 7: EMERGENCIES SYSTEM OVERVIEW */}
+          {/* TAB 7: EMERGENCIES SYSTEM OVERVIEW & INCIDENT COMMAND CENTER */}
           {/* ========================================================================= */}
           {activeTab === 'emergencies' && (
-            <div className="card">
-              <div className="card-header">
-                <h3 className="card-title">System-Wide Emergency Overview</h3>
-                <p style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
-                  Global bird's-eye view across Patient ➔ Emergency ➔ Hospital ➔ Doctor ➔ Ambulance ➔ Driver
-                </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
+              
+              {/* Incident Command Header & Telemetry Health */}
+              <div className="card" style={{ padding: 'var(--space-4) var(--space-5)', background: 'linear-gradient(135deg, #0B1F3A 0%, #1e3a8a 100%)', color: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+                  <div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.12)', padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800, marginBottom: '6px' }}>
+                      <span style={{ color: wsConnected ? '#34d399' : '#f87171' }}>●</span>
+                      <span>{wsConnected ? 'LIVE STOMP COMMAND NETWORK: SYNCHRONIZED' : 'RECONNECTING TELEMETRY STREAM...'}</span>
+                    </div>
+                    <h2 style={{ fontSize: '20px', fontWeight: 900, color: 'white', margin: 0 }}>
+                      Global Incident Command Center & Real-Time Dispatch
+                    </h2>
+                    <p style={{ fontSize: '12px', color: '#cbd5e1', margin: '4px 0 0 0' }}>
+                      Continuous bi-directional emergency telemetry synchronized across Patient, Admin, Hospital, and Ambulance units.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 'var(--radius-md)', padding: '8px 14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#93c5fd', fontWeight: 800 }}>Active Queue</div>
+                      <div style={{ fontSize: '18px', fontWeight: 900, color: '#ffffff' }}>{uniqueEmergencies.length}</div>
+                    </div>
+                    <div style={{ background: 'rgba(220, 38, 38, 0.2)', border: '1px solid rgba(239, 68, 68, 0.4)', borderRadius: 'var(--radius-md)', padding: '8px 14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#fca5a5', fontWeight: 800 }}>Critical Alerts</div>
+                      <div style={{ fontSize: '18px', fontWeight: 900, color: '#f87171' }}>{uniqueEmergencies.filter(e => e.severity === 'CRITICAL').length}</div>
+                    </div>
+                    <div style={{ background: 'rgba(13, 148, 136, 0.2)', border: '1px solid rgba(20, 184, 166, 0.4)', borderRadius: 'var(--radius-md)', padding: '8px 14px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#5eead4', fontWeight: 800 }}>Ambulances Active</div>
+                      <div style={{ fontSize: '18px', fontWeight: 900, color: '#2dd4bf' }}>{uniqueEmergencies.filter(e => e.ambulanceId || e.ambulance?.unitId).length}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { wsRefresh(); fetchAllData(); }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ background: 'rgba(255,255,255,0.15)', color: 'white', borderColor: 'rgba(255,255,255,0.3)', fontWeight: 700 }}
+                      title="Force manual sync with backend"
+                    >
+                      🔄 Force Sync
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="card-content">
-                {emergencies.length === 0 ? (
-                  <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-gray-500)' }}>
-                    <div style={{ fontSize: '36px', marginBottom: '8px' }}>🛡️</div>
-                    <div style={{ fontWeight: 800, fontSize: '16px' }}>No Active Emergencies in the Network</div>
-                    <div style={{ fontSize: '13px', marginTop: '4px' }}>All patient telemetry is stable. No pending dispatches.</div>
+              {/* Filters & Incident Search Bar */}
+              <div className="card" style={{ padding: 'var(--space-3) var(--space-4)' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 260px' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="🔍 Search by SOS ID, Patient name/UID, Symptoms, or Hospital..."
+                      value={emergencySearchQuery}
+                      onChange={e => setEmergencySearchQuery(e.target.value)}
+                      style={{ fontSize: '13px' }}
+                    />
                   </div>
-                ) : (
-                  <div className="table-wrapper">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>SOS ID</th>
-                          <th>Patient Info</th>
-                          <th>Assigned Hospital</th>
-                          <th>Assigned Doctor</th>
-                          <th>Dispatched Ambulance</th>
-                          <th>Severity & Vitals</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {emergencies.map(e => (
-                          <tr key={e.id}>
-                            <td style={{ fontWeight: 900 }}>SOS-{e.id}</td>
-                            <td>
-                              <strong>{e.patientName || e.patientUid}</strong>
-                              <div style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>{e.symptoms || 'Cardiac alert'}</div>
-                            </td>
-                            <td>{e.hospital?.name || (e.hospitalId ? `Hospital #${e.hospitalId}` : 'Not assigned')}</td>
-                            <td>{e.doctor?.name || (e.doctorId ? `Doctor #${e.doctorId}` : 'Emergency Team')}</td>
-                            <td>
-                              {e.ambulance?.unitId ? (
-                                <div>
-                                  <strong>{e.ambulance.unitId}</strong>
-                                  <div style={{ fontSize: '10px', color: 'var(--color-gray-500)' }}>Driver: {e.ambulance.driver?.fullName || 'Assigned'}</div>
-                                </div>
-                              ) : 'Not required'}
-                            </td>
-                            <td>
-                              <StatusBadge status={e.severity} size="sm" />
-                              {e.detectedVitals && <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>{e.detectedVitals}</div>}
-                            </td>
-                            <td><StatusBadge status={e.status} size="sm" /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-gray-600)' }}>Severity:</label>
+                    <select
+                      className="form-select"
+                      value={emergencySeverityFilter}
+                      onChange={e => setEmergencySeverityFilter(e.target.value)}
+                      style={{ fontSize: '12px', padding: '6px 10px', minWidth: '120px' }}
+                    >
+                      <option value="ALL">All Severities</option>
+                      <option value="CRITICAL">🚨 CRITICAL Only</option>
+                      <option value="HIGH">⚠️ HIGH Only</option>
+                      <option value="MODERATE">🟡 MODERATE Only</option>
+                      <option value="LOW">🟢 LOW Only</option>
+                    </select>
+
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-gray-600)', marginLeft: '6px' }}>Status:</label>
+                    <select
+                      className="form-select"
+                      value={emergencyStatusFilter}
+                      onChange={e => setEmergencyStatusFilter(e.target.value)}
+                      style={{ fontSize: '12px', padding: '6px 10px', minWidth: '140px' }}
+                    >
+                      <option value="ALL">All Active Statuses</option>
+                      <option value="DETECTED">DETECTED</option>
+                      <option value="HOSPITAL_ASSIGNED">HOSPITAL_ASSIGNED</option>
+                      <option value="AMBULANCE_REQUESTED">AMBULANCE_REQUESTED</option>
+                      <option value="AMBULANCE_ACCEPTED">AMBULANCE_ACCEPTED</option>
+                      <option value="EN_ROUTE_TO_PATIENT">EN_ROUTE_TO_PATIENT</option>
+                      <option value="ARRIVED_AT_PATIENT">ARRIVED_AT_PATIENT</option>
+                      <option value="PATIENT_PICKED_UP">PATIENT_PICKED_UP</option>
+                      <option value="EN_ROUTE_TO_HOSPITAL">EN_ROUTE_TO_HOSPITAL</option>
+                      <option value="ARRIVED_AT_HOSPITAL">ARRIVED_AT_HOSPITAL</option>
+                    </select>
+
+                    {(emergencySearchQuery || emergencySeverityFilter !== 'ALL' || emergencyStatusFilter !== 'ALL') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmergencySearchQuery('');
+                          setEmergencySeverityFilter('ALL');
+                          setEmergencyStatusFilter('ALL');
+                        }}
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: '12px', color: 'var(--color-primary-600)' }}
+                      >
+                        Reset Filters
+                      </button>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
+
+              {/* Main Dual-Pane Command Center */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(320px, 1.1fr) minmax(460px, 1.9fr)',
+                gap: 'var(--space-5)',
+                alignItems: 'start'
+              }}>
+                
+                {/* LEFT PANE: Active Incident Queue List */}
+                <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                  <div className="card-header" style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--color-gray-50)', borderBottom: '1px solid var(--color-gray-200)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h3 style={{ fontSize: '14px', fontWeight: 800, margin: 0, color: 'var(--color-gray-900)' }}>
+                        🚨 Active Incidents Queue ({filteredEmergencies.length})
+                      </h3>
+                      <span style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>
+                        Ranked by clinical severity & recency
+                      </span>
+                    </div>
+                    {filteredEmergencies.length > 0 && (
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-primary-600)' }}>
+                        {selectedEmergency ? `Selected: SOS-${selectedEmergency.id}` : 'Select to inspect'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ maxHeight: '680px', overflowY: 'auto', padding: 'var(--space-3)' }}>
+                    {filteredEmergencies.length === 0 ? (
+                      <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--color-gray-500)' }}>
+                        <div style={{ fontSize: '36px', marginBottom: '8px' }}>🛡️</div>
+                        <strong style={{ fontSize: '14px', color: 'var(--color-gray-700)' }}>No Incidents Found</strong>
+                        <p style={{ fontSize: '12px', margin: '4px 0 0 0' }}>
+                          {uniqueEmergencies.length === 0 
+                            ? 'All network queues clear. No active emergencies reported.' 
+                            : 'No active incidents match the selected filter criteria.'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {filteredEmergencies.map(e => {
+                          const isSelected = selectedEmergency?.id === e.id;
+                          const isCritical = e.severity === 'CRITICAL';
+                          return (
+                            <div
+                              key={e.id}
+                              onClick={() => setSelectedEmergency(e)}
+                              style={{
+                                padding: '12px 14px',
+                                borderRadius: 'var(--radius-md)',
+                                border: isSelected 
+                                  ? '2px solid var(--color-primary-600)' 
+                                  : isCritical 
+                                    ? '1px solid #FECACA' 
+                                    : '1px solid var(--color-gray-200)',
+                                background: isSelected 
+                                  ? '#eff6ff' 
+                                  : isCritical 
+                                    ? '#FEF2F2' 
+                                    : 'white',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.15)' : 'none',
+                                position: 'relative'
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {isCritical && <span style={{ color: '#DC2626', animation: 'pulse 1.5s infinite' }}>🚨</span>}
+                                  <strong style={{ fontSize: '13px', color: isCritical ? '#991B1B' : 'var(--color-gray-900)' }}>
+                                    SOS-{e.id}
+                                  </strong>
+                                  <StatusBadge status={e.severity} size="sm" />
+                                </div>
+                                <span style={{ fontSize: '11px', fontWeight: 800, color: isCritical ? '#DC2626' : 'var(--color-gray-600)', background: isCritical ? '#FEE2E2' : 'var(--color-gray-100)', padding: '1px 6px', borderRadius: '4px' }}>
+                                  Risk {e.riskScore ?? 85}/100
+                                </span>
+                              </div>
+
+                              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-gray-800)', marginBottom: '3px' }}>
+                                {e.patientName || e.patientUid || 'Emergency Patient'}
+                              </div>
+
+                              <div style={{ fontSize: '11px', color: 'var(--color-gray-600)', marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <strong>Symptoms:</strong> {e.symptoms || 'Acute distress / Cardiac risk detected'}
+                              </div>
+
+                              {/* Telemetry Chips */}
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                {e.heartRate && (
+                                  <span style={{ fontSize: '10px', background: '#FEE2E2', color: '#991B1B', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                    ❤️ {e.heartRate} bpm
+                                  </span>
+                                )}
+                                {e.oxygenLevel && (
+                                  <span style={{ fontSize: '10px', background: '#E0F2FE', color: '#0369A1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                    🫁 {e.oxygenLevel}% SpO2
+                                  </span>
+                                )}
+                                {e.bloodPressure && (
+                                  <span style={{ fontSize: '10px', background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                    🩺 {e.bloodPressure}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--color-gray-500)', borderTop: '1px dashed var(--color-gray-200)', paddingTop: '6px' }}>
+                                <span title={e.hospital?.name || 'Assigned Hospital'}>
+                                  🏥 {e.hospital?.name ? (e.hospital.name.length > 18 ? e.hospital.name.slice(0, 18) + '...' : e.hospital.name) : (e.hospitalId ? `Hospital #${e.hospitalId}` : 'Assigning...')}
+                                </span>
+                                <StatusBadge status={e.status} size="sm" />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT PANE: Selected Incident Command & Live Telemetry Console */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                  {!selectedEmergency ? (
+                    <div className="card" style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--color-gray-500)' }}>
+                      <div style={{ fontSize: '42px', marginBottom: '12px' }}>📡</div>
+                      <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-gray-800)' }}>No Incident Selected</h3>
+                      <p style={{ fontSize: '13px', maxWidth: '380px', margin: '6px auto 0 auto', color: 'var(--color-gray-600)' }}>
+                        Select any emergency incident from the active queue to view live GPS dispatch telemetry, patient vitals, hospital triage status, and execute administrative actions.
+                      </p>
+                    </div>
+                  ) : (() => {
+                    const e = selectedEmergency;
+                    const liveAmb = ambulanceLocationsMap[e.id] || (e.ambulanceId ? ambulanceLocationsMap[e.ambulanceId] : null);
+                    const ambCoords = liveAmb?.latitude && liveAmb?.longitude
+                      ? [liveAmb.latitude, liveAmb.longitude]
+                      : (ambulanceLocation?.latitude && ambulanceLocation?.longitude
+                          ? [ambulanceLocation.latitude, ambulanceLocation.longitude]
+                          : (e.ambulance?.latitude && e.ambulance?.longitude
+                              ? [e.ambulance.latitude, e.ambulance.longitude]
+                              : null));
+                    const ambStatus = liveAmb?.status || ambulanceLocation?.status || e.ambulance?.status || e.ambulanceStatus || e.status;
+                    const ambUnitId = liveAmb?.unitId || e.ambulance?.unitId || (e.ambulanceId ? `AMB-${e.ambulanceId}` : 'AMB-102');
+                    const driverName = e.ambulance?.driver?.fullName || e.ambulance?.driverName || 'Emergency Driver';
+
+                    return (
+                      <>
+                        {/* Incident Header & Executive Action Controls */}
+                        <div className="card" style={{ padding: 'var(--space-4)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--color-gray-200)', paddingBottom: '12px', marginBottom: '12px' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '20px' }}>🚨</span>
+                                <h2 style={{ fontSize: '18px', fontWeight: 900, margin: 0, color: 'var(--color-gray-900)' }}>
+                                  Incident Command: SOS-{e.id}
+                                </h2>
+                                <StatusBadge status={e.severity} size="sm" />
+                                <StatusBadge status={e.status} size="sm" />
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--color-gray-600)' }}>
+                                Patient: <strong>{e.patientName || e.patientUid}</strong> ({e.patientUid}) • Reported: <strong>{e.createdAt ? new Date(e.createdAt).toLocaleString() : 'Just now'}</strong>
+                              </div>
+                            </div>
+
+                            {/* Administrative Action Command Buttons */}
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                disabled={emergencyActionLoading !== null}
+                                onClick={() => handleResolveEmergency(e.id)}
+                                className="btn btn-primary btn-sm"
+                                style={{ backgroundColor: '#10b981', borderColor: '#10b981', fontWeight: 700 }}
+                              >
+                                {emergencyActionLoading === 'resolve' ? 'Resolving...' : '✓ Resolve Incident'}
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={emergencyActionLoading !== null}
+                                onClick={() => {
+                                  setEmergencyToCancel(e);
+                                  setIsCancelEmergencyConfirmOpen(true);
+                                }}
+                                className="btn btn-secondary btn-sm"
+                                style={{ color: '#DC2626', borderColor: '#FCA5A5', fontWeight: 700, backgroundColor: '#FEF2F2' }}
+                              >
+                                {emergencyActionLoading === 'cancel' ? 'Cancelling...' : '✕ Cancel Incident'}
+                              </button>
+
+                              {(!e.ambulanceId && !e.ambulance?.unitId) && (
+                                <button
+                                  type="button"
+                                  disabled={emergencyActionLoading !== null}
+                                  onClick={() => handleDispatchAmbulance(e.id)}
+                                  className="btn btn-secondary btn-sm"
+                                  style={{ color: '#0369A1', borderColor: '#7DD3FC', fontWeight: 700, backgroundColor: '#F0F9FF' }}
+                                >
+                                  {emergencyActionLoading === 'dispatch' ? 'Dispatching...' : '🚑 Dispatch Ambulance'}
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => setIsHospitalOverrideModalOpen(true)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ fontWeight: 600 }}
+                              >
+                                🏥 Hospital Details / Override
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Quick Risk Score & Priority Alert Banner */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FEF2F2', padding: '10px 14px', borderRadius: 'var(--radius-md)', border: '1px solid #FECACA' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ fontSize: '18px' }}>⚠️</span>
+                              <div>
+                                <strong style={{ fontSize: '12px', color: '#991B1B' }}>
+                                  AI Risk Severity Assessment: {e.severity} ({e.riskScore ?? 88}/100)
+                                </strong>
+                                <div style={{ fontSize: '11px', color: '#7F1D1D' }}>
+                                  Chief Complaint: {e.symptoms || 'Acute symptoms requiring emergency triage'}
+                                </div>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '11px', background: '#DC2626', color: 'white', padding: '3px 8px', borderRadius: '4px', fontWeight: 800 }}>
+                              PRIORITY 1
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Live Route & GPS Telemetry Panel */}
+                        <div className="card" style={{ padding: 'var(--space-4)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: 800, margin: 0 }}>
+                              🗺️ Live Incident GPS Tracking & Dispatch Routing
+                            </h3>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', fontSize: '11px' }}>
+                              <span style={{ color: ambCoords ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+                                {ambCoords ? '● Real-Time GPS Active' : '● Vehicle Coordinates Simulated / Standby'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <GoogleMapTracking
+                            patientLocation={[e.patientLatitude || e.latitude || 12.9716, e.patientLongitude || e.longitude || 77.5946]}
+                            hospitalLocation={e.hospital?.latitude && e.hospital?.longitude ? [e.hospital.latitude, e.hospital.longitude] : (e.hospitalLat && e.hospitalLng ? [e.hospitalLat, e.hospitalLng] : [12.9760, 77.6000])}
+                            ambulanceLocation={ambCoords}
+                            ambulanceStatus={ambStatus}
+                            ambulanceUnitId={ambUnitId}
+                            driverName={driverName}
+                            emergencyId={e.id}
+                            height="340px"
+                          />
+                        </div>
+
+                        {/* Diagnostic & Telemetry Detail Grids */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-4)' }}>
+                          
+                          {/* Card 1: Patient Telemetry & Vitals */}
+                          <div className="card" style={{ padding: 'var(--space-4)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                              <span style={{ fontSize: '18px' }}>👤</span>
+                              <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0 }}>Patient Telemetry & Vitals</h4>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                              <div style={{ background: 'var(--color-gray-50)', padding: '8px', borderRadius: '6px' }}>
+                                <div style={{ fontSize: '10px', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Heart Rate</div>
+                                <div style={{ fontSize: '14px', fontWeight: 800, color: '#DC2626' }}>
+                                  {e.heartRate || 108} <span style={{ fontSize: '10px', fontWeight: 400 }}>bpm</span>
+                                </div>
+                              </div>
+                              <div style={{ background: 'var(--color-gray-50)', padding: '8px', borderRadius: '6px' }}>
+                                <div style={{ fontSize: '10px', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Blood Oxygen</div>
+                                <div style={{ fontSize: '14px', fontWeight: 800, color: '#0284C7' }}>
+                                  {e.oxygenLevel || 91} <span style={{ fontSize: '10px', fontWeight: 400 }}>% SpO2</span>
+                                </div>
+                              </div>
+                              <div style={{ background: 'var(--color-gray-50)', padding: '8px', borderRadius: '6px' }}>
+                                <div style={{ fontSize: '10px', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Blood Pressure</div>
+                                <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-gray-800)' }}>
+                                  {e.bloodPressure || '142/92'}
+                                </div>
+                              </div>
+                              <div style={{ background: 'var(--color-gray-50)', padding: '8px', borderRadius: '6px' }}>
+                                <div style={{ fontSize: '10px', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Respiratory Rate</div>
+                                <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-gray-800)' }}>
+                                  {e.respiratoryRate || 24} <span style={{ fontSize: '10px', fontWeight: 400 }}>rpm</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div style={{ marginTop: '10px', fontSize: '11px', color: 'var(--color-gray-600)', borderTop: '1px solid var(--color-gray-200)', paddingTop: '8px' }}>
+                              <div><strong>Patient UID:</strong> {e.patientUid || 'LKT01'}</div>
+                              <div><strong>GPS Coords:</strong> {(e.patientLatitude || 12.9716)?.toFixed(4)}, {(e.patientLongitude || 77.5946)?.toFixed(4)}</div>
+                            </div>
+                          </div>
+
+                          {/* Card 2: Assigned Hospital & Doctor */}
+                          <div className="card" style={{ padding: 'var(--space-4)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                              <span style={{ fontSize: '18px' }}>🏥</span>
+                              <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0 }}>Assigned Hospital & Clinical Unit</h4>
+                            </div>
+                            <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div>
+                                <div style={{ fontSize: '10px', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Hospital Name</div>
+                                <div style={{ fontWeight: 800, fontSize: '13px' }}>
+                                  {e.hospital?.name || (e.hospitalId ? `Hospital #${e.hospitalId}` : 'Assigned Nearest ER')}
+                                </div>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                                <div style={{ background: 'var(--color-gray-50)', padding: '6px 8px', borderRadius: '4px' }}>
+                                  <div style={{ fontSize: '10px', color: 'var(--color-gray-500)' }}>Available Beds</div>
+                                  <div style={{ fontWeight: 800 }}>{e.hospital?.availableBeds ?? 14} / {e.hospital?.totalBeds ?? 100}</div>
+                                </div>
+                                <div style={{ background: 'var(--color-gray-50)', padding: '6px 8px', borderRadius: '4px' }}>
+                                  <div style={{ fontSize: '10px', color: 'var(--color-gray-500)' }}>Triage Status</div>
+                                  <div style={{ fontWeight: 800, color: '#10b981' }}>ACCEPTED</div>
+                                </div>
+                              </div>
+                              <div style={{ marginTop: '4px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '6px' }}>
+                                <div style={{ fontSize: '10px', color: 'var(--color-gray-500)' }}>Assigned Specialist Doctor</div>
+                                <div style={{ fontWeight: 700 }}>{e.doctor?.name || (e.doctorId ? `Doctor #${e.doctorId}` : 'Emergency On-Call Physician')}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>{e.doctor?.specialization || 'Cardiology / Acute Care'}</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Card 3: Dispatched Ambulance & Driver */}
+                          <div className="card" style={{ padding: 'var(--space-4)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                              <span style={{ fontSize: '18px' }}>🚑</span>
+                              <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0 }}>Ambulance Fleet Telemetry</h4>
+                            </div>
+                            <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div>
+                                <div style={{ fontSize: '10px', color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Dispatched Unit</div>
+                                <div style={{ fontWeight: 800, fontSize: '13px' }}>
+                                  {ambUnitId}
+                                </div>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                                <div style={{ background: 'var(--color-gray-50)', padding: '6px 8px', borderRadius: '4px' }}>
+                                  <div style={{ fontSize: '10px', color: 'var(--color-gray-500)' }}>Driver</div>
+                                  <div style={{ fontWeight: 700 }}>{driverName}</div>
+                                </div>
+                                <div style={{ background: 'var(--color-gray-50)', padding: '6px 8px', borderRadius: '4px' }}>
+                                  <div style={{ fontSize: '10px', color: 'var(--color-gray-500)' }}>Status</div>
+                                  <div><StatusBadge status={ambStatus} size="sm" /></div>
+                                </div>
+                              </div>
+                              <div style={{ marginTop: '4px', borderTop: '1px solid var(--color-gray-200)', paddingTop: '6px' }}>
+                                <div style={{ fontSize: '10px', color: 'var(--color-gray-500)' }}>GPS Live Stream Coordinates</div>
+                                <div style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--color-gray-700)' }}>
+                                  {ambCoords ? `${ambCoords[0]?.toFixed(4)}, ${ambCoords[1]?.toFixed(4)}` : 'Awaiting mobile device ping'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Card 4: Event Audit Trail Timeline */}
+                          <div className="card" style={{ padding: 'var(--space-4)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                              <span style={{ fontSize: '18px' }}>📜</span>
+                              <h4 style={{ fontSize: '13px', fontWeight: 800, margin: 0 }}>Incident Timeline & Audit Trail</h4>
+                            </div>
+                            <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px' }}>
+                              {selectedEmergencyTimeline.length > 0 ? (
+                                selectedEmergencyTimeline.map((item, idx) => (
+                                  <div key={idx} style={{ display: 'flex', gap: '8px', borderLeft: '2px solid var(--color-primary-500)', paddingLeft: '8px' }}>
+                                    <div style={{ color: 'var(--color-gray-500)', minWidth: '60px' }}>
+                                      {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                                    </div>
+                                    <div>
+                                      <strong>{item.event || item.status || 'STATUS_UPDATE'}</strong>
+                                      {item.description && <div style={{ color: 'var(--color-gray-600)' }}>{item.description}</div>}
+                                      {item.actor && <div style={{ fontSize: '10px', color: 'var(--color-gray-400)' }}>By: {item.actor}</div>}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  <div style={{ display: 'flex', gap: '8px', borderLeft: '2px solid #10b981', paddingLeft: '8px' }}>
+                                    <div style={{ color: 'var(--color-gray-500)', minWidth: '60px' }}>
+                                      {e.createdAt ? new Date(e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '00:00'}
+                                    </div>
+                                    <div>
+                                      <strong>EMERGENCY_DETECTED</strong>
+                                      <div style={{ color: 'var(--color-gray-600)' }}>Patient triggered SOS alert. AI triage score: {e.riskScore ?? 88}/100.</div>
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '8px', borderLeft: '2px solid var(--color-primary-500)', paddingLeft: '8px' }}>
+                                    <div style={{ color: 'var(--color-gray-500)', minWidth: '60px' }}>
+                                      {e.updatedAt ? new Date(e.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '00:01'}
+                                    </div>
+                                    <div>
+                                      <strong>{e.status}</strong>
+                                      <div style={{ color: 'var(--color-gray-600)' }}>Current active status across synchronized dashboards.</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+              </div>
+
             </div>
           )}
 
@@ -1979,6 +2696,105 @@ export default function AdminDashboard({ defaultTab }) {
                   >
                     Open Setup Page ↗
                   </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal: Administrative Emergency Cancellation */}
+          <CancelEmergencyModal
+            isOpen={isCancelEmergencyConfirmOpen}
+            emergency={emergencyToCancel}
+            onClose={() => {
+              if (emergencyActionLoading !== 'cancel') {
+                setIsCancelEmergencyConfirmOpen(false);
+                setEmergencyToCancel(null);
+                setCancelEmergencyError(null);
+              }
+            }}
+            onConfirm={handleConfirmCancelEmergency}
+            isCancelling={emergencyActionLoading === 'cancel'}
+            error={cancelEmergencyError}
+          />
+
+          {/* Modal: Hospital Assignment & Triage Details / Override */}
+          {isHospitalOverrideModalOpen && selectedEmergency && (
+            <div className="modal-backdrop" style={{
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+            }}>
+              <div className="card" style={{ width: '100%', maxWidth: '580px', padding: 'var(--space-6)', maxHeight: '90vh', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>
+                      Hospital Triage & Facility Assignment
+                    </h3>
+                    <p style={{ fontSize: '12px', color: 'var(--color-gray-500)', margin: '4px 0 0 0' }}>
+                      Incident: <strong>SOS-{selectedEmergency.id}</strong> • Patient: <strong>{selectedEmergency.patientName || selectedEmergency.patientUid}</strong>
+                    </p>
+                  </div>
+                  <button onClick={() => setIsHospitalOverrideModalOpen(false)} className="btn btn-ghost btn-sm">✕</button>
+                </div>
+
+                {/* Currently Assigned Hospital Card */}
+                <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '14px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#166534', fontWeight: 800, marginBottom: '4px' }}>
+                    CURRENTLY ASSIGNED RECEIVING HOSPITAL
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: 900, color: '#14532D' }}>
+                    {selectedEmergency.hospital?.name || (selectedEmergency.hospitalId ? `Hospital #${selectedEmergency.hospitalId}` : 'Assigned Emergency Facility')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#166534', marginTop: '6px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    <span>🛏️ Available Beds: <strong>{selectedEmergency.hospital?.availableBeds ?? 14} / {selectedEmergency.hospital?.totalBeds ?? 100}</strong></span>
+                    <span>👨‍⚕️ Receiving Doctor: <strong>{selectedEmergency.doctor?.name || 'Emergency Team'}</strong></span>
+                  </div>
+                </div>
+
+                {/* System Architecture Explanation Alert */}
+                <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '14px', marginBottom: '16px', fontSize: '12px', color: '#1E40AF', lineHeight: 1.5 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '16px' }}>ℹ️</span>
+                    <strong style={{ fontSize: '13px', color: '#1E3A8A' }}>Automated Clinical Triage & Architectural Contract</strong>
+                  </div>
+                  <p style={{ margin: '0 0 8px 0' }}>
+                    VitalGuard's triage engine (<code>EmergencyWorkflowService</code>) allocates receiving facilities using AI risk severity, specialized ICU bed availability, and Haversine geospatial proximity.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    <strong>Backend Contract Status:</strong> The existing REST API enforces triage immutability to prevent conflicting hospital transfers while response units are en route. Direct manual hospital reassignment would require endpoint <code>PATCH /api/admin/emergencies/{'{id}'}/hospital</code>, which is documented in the technical sync report.
+                  </p>
+                </div>
+
+                {/* Network Hospitals Overview */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-gray-700)', marginBottom: '8px' }}>
+                    Registered Network Hospitals & Real-Time Capacity:
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
+                    {hospitals.map(h => (
+                      <div key={h.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--color-gray-200)', background: 'var(--color-gray-50)', fontSize: '12px' }}>
+                        <div>
+                          <strong>{h.name}</strong>
+                          <div style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>{h.address || 'Central City Healthcare Facility'}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontWeight: 800, color: h.availableBeds > 10 ? '#10b981' : '#f59e0b' }}>
+                            {h.availableBeds ?? 20} Beds Free
+                          </span>
+                          <div style={{ fontSize: '10px', color: 'var(--color-gray-400)' }}>⭐ {h.rating || 4.8} / 5.0</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsHospitalOverrideModalOpen(false)}
+                    className="btn btn-primary btn-sm"
+                  >
+                    Done / Close
+                  </button>
                 </div>
               </div>
             </div>

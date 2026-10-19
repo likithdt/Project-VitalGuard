@@ -66,16 +66,18 @@ const Login = () => {
     setError('');
   };
 
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div style={{
       minHeight: '100vh',
       display: 'flex',
-      backgroundColor: 'var(--color-gray-50)'
+      backgroundColor: 'var(--color-bg-main)'
     }}>
       {/* Left Column: Medical Branding & Platform Visual */}
       <div style={{
         flex: 1,
-        background: 'linear-gradient(135deg, #0a2540 0%, #163b6d 100%)',
+        background: 'linear-gradient(135deg, #0B1F3A 0%, #162E52 65%, #0D9488 120%)',
         color: 'white',
         padding: 'var(--space-10) var(--space-8)',
         display: 'flex',
@@ -84,36 +86,49 @@ const Login = () => {
         position: 'relative',
         overflow: 'hidden'
       }} className="login-branding-col">
-        {/* Subtle grid accent */}
+        {/* Subtle grid and mesh accent */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: 'radial-gradient(rgba(56, 189, 248, 0.15) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
+          backgroundImage: 'radial-gradient(rgba(59, 130, 246, 0.18) 1.5px, transparent 1.5px)',
+          backgroundSize: '24px 24px',
           pointerEvents: 'none'
+        }} />
+
+        <div style={{
+          position: 'absolute',
+          bottom: '-10%',
+          right: '-10%',
+          width: '420px',
+          height: '420px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(13, 148, 136, 0.25) 0%, transparent 70%)',
+          pointerEvents: 'none',
+          filter: 'blur(30px)'
         }} />
 
         {/* Top Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', zIndex: 2 }}>
           <div style={{
-            width: '44px',
-            height: '44px',
+            width: '46px',
+            height: '46px',
             borderRadius: 'var(--radius-lg)',
-            background: 'white',
+            background: 'linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%)',
             color: 'var(--color-primary)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '24px',
-            boxShadow: 'var(--shadow-md)'
+            boxShadow: '0 4px 14px rgba(11, 31, 58, 0.25)',
+            border: '1px solid rgba(255, 255, 255, 0.3)'
           }}>
             🛡️
           </div>
           <div>
-            <div style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.02em', color: 'white' }}>
+            <div style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em', color: 'white' }}>
               VitalGuard
             </div>
-            <div style={{ fontSize: '11px', color: '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ fontSize: '11px', color: '#5EEAD4', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
               Emergency Healthcare Command
             </div>
           </div>
@@ -125,24 +140,26 @@ const Login = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            padding: '4px 12px',
+            padding: '6px 14px',
             borderRadius: 'var(--radius-full)',
-            background: 'rgba(56, 189, 248, 0.15)',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            color: '#7dd3fc',
-            fontSize: '12px',
-            fontWeight: 700,
-            marginBottom: 'var(--space-4)'
+            background: 'rgba(13, 148, 136, 0.22)',
+            border: '1px solid rgba(13, 148, 136, 0.4)',
+            color: '#CCFBF1',
+            fontSize: '11px',
+            fontWeight: 800,
+            letterSpacing: '0.05em',
+            marginBottom: 'var(--space-5)'
           }}>
-            <span className="pulse-dot" style={{ backgroundColor: '#38bdf8' }} />
+            <span className="pulse-dot" style={{ backgroundColor: '#2DD4BF' }} />
             <span>REAL-TIME EMERGENCY RESPONSE INFRASTRUCTURE</span>
           </div>
 
           <h1 style={{
-            fontSize: '2.25rem',
+            fontSize: '2.5rem',
             fontWeight: 900,
             color: 'white',
-            lineHeight: 1.2,
+            lineHeight: 1.15,
+            letterSpacing: '-0.02em',
             marginBottom: 'var(--space-4)'
           }}>
             Intelligent Emergency Triage & Hospital Coordination
@@ -150,7 +167,7 @@ const Login = () => {
 
           <p style={{
             fontSize: 'var(--font-size-base)',
-            color: '#cbd5e1',
+            color: '#E2E8F0',
             lineHeight: 1.6,
             marginBottom: 'var(--space-6)'
           }}>
@@ -158,21 +175,46 @@ const Login = () => {
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-            <div style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-              <div style={{ fontWeight: 800, fontSize: '13px', color: '#67e8f9' }}>⚡ Sub-Second Triage</div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>AI risk prioritization algorithm</div>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              backdropFilter: 'blur(10px)',
+              padding: '14px 16px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{ fontWeight: 800, fontSize: '13px', color: '#5EEAD4' }}>⚡ Sub-Second Triage</div>
+              <div style={{ fontSize: '12px', color: '#CBD5E1', marginTop: '3px', lineHeight: 1.4 }}>AI risk prioritization and predictive vital regressions</div>
             </div>
 
-            <div style={{ background: 'rgba(255, 255, 255, 0.06)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-              <div style={{ fontWeight: 800, fontSize: '13px', color: '#67e8f9' }}>🚑 Live Fleet Telemetry</div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>Continuous GPS ambulance tracking</div>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              backdropFilter: 'blur(10px)',
+              padding: '14px 16px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{ fontWeight: 800, fontSize: '13px', color: '#93C5FD' }}>🚑 Live Fleet Telemetry</div>
+              <div style={{ fontSize: '12px', color: '#CBD5E1', marginTop: '3px', lineHeight: 1.4 }}>Continuous GPS ambulance tracking & smart hospital bed routing</div>
             </div>
           </div>
         </div>
 
-        {/* Footer info */}
-        <div style={{ fontSize: '11px', color: '#94a3b8', zIndex: 2 }}>
-          Protected by role-based medical access tokens • HIPAA & SOC2 Ready
+        {/* Footer trust badge */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          fontSize: '11px',
+          color: '#94A3B8',
+          zIndex: 2,
+          paddingTop: 'var(--space-4)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <span>🔒 Protected by Role-Based Clinical Authorization</span>
+          <span>•</span>
+          <span>HIPAA & SOC2 Ready</span>
         </div>
       </div>
 
@@ -182,31 +224,55 @@ const Login = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-6)'
+        padding: 'var(--space-8)'
       }}>
-        <div style={{ width: '100%', maxWidth: '420px' }}>
-          <div className="card" style={{ padding: 'var(--space-8)' }}>
+        <div style={{ width: '100%', maxWidth: '440px' }}>
+          <div className="card" style={{
+            padding: 'var(--space-8)',
+            boxShadow: 'var(--shadow-xl)',
+            borderRadius: 'var(--radius-xl)'
+          }}>
             <div style={{ marginBottom: 'var(--space-6)' }}>
-              <h2 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-gray-900)' }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '3px 10px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: 'var(--color-secondary-bg)',
+                color: 'var(--color-secondary)',
+                fontSize: '11px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '8px'
+              }}>
+                Secure Clinical Gateway
+              </div>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-text-primary)', letterSpacing: '-0.02em' }}>
                 Welcome to VitalGuard
               </h2>
-              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)', marginTop: '4px' }}>
+              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginTop: '4px' }}>
                 Sign in to your clinical or patient emergency account
               </p>
             </div>
 
             {error && (
               <div style={{
-                padding: '10px 14px',
+                padding: '12px 16px',
                 borderRadius: 'var(--radius-md)',
                 backgroundColor: 'var(--color-critical-bg)',
                 border: '1px solid var(--color-critical-border)',
                 color: 'var(--color-critical)',
-                fontSize: '12px',
+                fontSize: '13px',
                 fontWeight: 600,
-                marginBottom: 'var(--space-4)'
+                marginBottom: 'var(--space-5)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }} role="alert">
-                ⚠️ {error}
+                <span>⚠️</span>
+                <span>{error}</span>
               </div>
             )}
 
@@ -228,51 +294,96 @@ const Login = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <label className="form-label" htmlFor="password-input">Password</label>
                 </div>
-                <input
-                  id="password-input"
-                  type="password"
-                  className="form-input"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    id="password-input"
+                    type={showPassword ? 'text' : 'password'}
+                    className="form-input"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    style={{ paddingRight: '44px' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '16px',
+                      color: 'var(--color-text-secondary)',
+                      padding: '4px'
+                    }}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="btn btn-primary w-full"
-                style={{ padding: '11px', fontWeight: 800 }}
+                className="btn btn-blue w-full"
+                style={{
+                  padding: '12px',
+                  fontWeight: 800,
+                  fontSize: 'var(--font-size-base)',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.28)'
+                }}
                 disabled={loading}
               >
-                {loading ? 'Authenticating...' : 'Sign In'}
+                {loading ? 'Authenticating...' : 'Sign In to Portal'}
               </button>
             </form>
 
             {/* Quick Demo Credentials Switcher */}
             <div style={{ marginTop: 'var(--space-6)', paddingTop: 'var(--space-5)', borderTop: '1px solid var(--color-gray-200)' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-gray-500)', textTransform: 'uppercase', marginBottom: '8px' }}>
-                Quick Demo Role Switcher
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '10px'
+              }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Quick Demo Role Switcher
+                </span>
+                <span style={{ fontSize: '10px', color: 'var(--color-teal)', fontWeight: 700 }}>Auto-fill Test Login</span>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                {demoAccounts.map(d => (
-                  <button
-                    key={d.role}
-                    type="button"
-                    onClick={() => handleSelectDemo(d)}
-                    className="btn btn-secondary btn-sm"
-                    style={{ fontSize: '11px', padding: '4px 8px' }}
-                  >
-                    <span>{d.icon}</span>
-                    <span>{d.label}</span>
-                  </button>
-                ))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                {demoAccounts.map(d => {
+                  const isSelected = email === d.email;
+                  return (
+                    <button
+                      key={d.role}
+                      type="button"
+                      onClick={() => handleSelectDemo(d)}
+                      className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{
+                        fontSize: '11px',
+                        padding: '6px 8px',
+                        justifyContent: 'flex-start',
+                        gap: '6px'
+                      }}
+                      title={`Login as ${d.label}`}
+                    >
+                      <span>{d.icon}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* Create account link */}
-            <div style={{ marginTop: 'var(--space-6)', textAlign: 'center', fontSize: '13px', color: 'var(--color-gray-600)' }}>
-              Need an account?{' '}
+            <div style={{ marginTop: 'var(--space-6)', textAlign: 'center', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+              Need an emergency monitoring account?{' '}
               <Link to="/signup" style={{ color: 'var(--color-secondary)', fontWeight: 700, textDecoration: 'none' }}>
                 Create Patient Account
               </Link>

@@ -84,117 +84,167 @@ const Signup = () => {
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center', 
-      background: 'var(--color-gray-50)',
-      padding: 'var(--space-6)',
+      background: 'var(--color-bg-main)',
+      padding: 'var(--space-8) var(--space-4)',
     }}>
       <div style={{ 
         width: '100%', 
-        maxWidth: '720px',
+        maxWidth: '760px',
       }}>
         {/* Signup Card */}
         <div className="card" style={{ 
           padding: 'var(--space-8)', 
           boxShadow: 'var(--shadow-xl)',
+          borderRadius: 'var(--radius-xl)',
+          background: 'var(--color-white)',
+          border: '1px solid rgba(226, 232, 240, 0.9)'
         }}>
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>
-            <div className="avatar avatar-xl" style={{ 
+            <div style={{ 
+              width: '56px',
+              height: '56px',
+              borderRadius: 'var(--radius-lg)',
               margin: '0 auto var(--space-4)',
-              background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))',
+              background: 'linear-gradient(135deg, var(--color-primary) 0%, #162E52 60%, var(--color-secondary) 100%)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '28px',
+              boxShadow: '0 4px 14px rgba(11, 31, 58, 0.25)'
             }}>
               🛡️
             </div>
-            <h1 style={{ 
-              fontSize: 'var(--font-size-3xl)', 
-              fontWeight: 'var(--font-weight-extrabold)',
-              color: 'var(--color-gray-900)',
-              marginBottom: 'var(--space-2)',
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '3px 12px',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--color-teal-bg)',
+              color: 'var(--color-teal)',
+              fontSize: '11px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em',
+              marginBottom: 'var(--space-2)'
             }}>
-              Create Account
+              Clinical Emergency Network
+            </div>
+            <h1 style={{ 
+              fontSize: '2rem', 
+              fontWeight: 800,
+              color: 'var(--color-text-primary)',
+              letterSpacing: '-0.02em',
+              marginBottom: '6px',
+            }}>
+              Create VitalGuard Account
             </h1>
             <p style={{ 
-              fontSize: 'var(--font-size-xs)', 
-              fontWeight: 'var(--font-weight-semibold)',
-              color: 'var(--color-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              marginBottom: 'var(--space-2)',
+              fontSize: 'var(--font-size-sm)', 
+              color: 'var(--color-text-secondary)',
+              maxWidth: '460px',
+              margin: '0 auto'
             }}>
-              VitalGuard Health Network
-            </p>
-            <p style={{ 
-              fontSize: 'var(--font-size-base)', 
-              color: 'var(--color-gray-500)',
-            }}>
-              Join the health command & telemetry network
+              Register for continuous biometric telemetry, automated emergency SOS dispatch, and specialist physician coordination
             </p>
           </div>
 
           {/* Error */}
           {error && (
-            <div className="alert alert-critical" style={{ marginBottom: 'var(--space-5)' }}>
-              <span style={{ fontSize: '18px' }}>🚨</span>
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--color-critical-bg)',
+              border: '1px solid var(--color-critical-border)',
+              color: 'var(--color-critical)',
+              fontSize: '13px',
+              fontWeight: 600,
+              marginBottom: 'var(--space-5)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }} role="alert">
+              <span>🚨</span>
               <div>
-                <div className="alert-title">Registration Failed</div>
-                <div className="alert-message">{error}</div>
+                <strong style={{ display: 'block' }}>Registration Failed</strong>
+                <span>{error}</span>
               </div>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-            {/* Account Type */}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+            {/* Account Type Selector */}
             <div className="form-group">
-              <label className="form-label">Account Type</label>
-              <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-                {roleOptions.map((role) => (
-                  <label 
-                    key={role.value}
-                    style={{ 
-                      flex: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 'var(--space-2)',
-                      padding: 'var(--space-4)',
-                      border: `2px solid ${formData.role === role.value ? 'var(--color-primary)' : 'var(--color-gray-300)'}`,
-                      borderRadius: 'var(--radius-xl)',
-                      background: formData.role === role.value ? 'var(--color-primary-bg)' : 'var(--color-white)',
-                      cursor: 'pointer',
-                      transition: 'all var(--transition-fast)',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="role"
-                      value={role.value}
-                      checked={formData.role === role.value}
-                      onChange={handleChange}
-                      style={{ display: 'none' }}
-                    />
-                    <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: formData.role === role.value ? 'var(--color-primary)' : 'var(--color-gray-900)' }}>
-                      {role.label}
-                    </span>
-                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-500)' }}>
-                      {role.value === 'PATIENT' ? 'Full access to vitals & emergency' : 'Monitor loved ones'}
-                    </span>
-                  </label>
-                ))}
+              <label className="form-label">Select Account Role</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+                {roleOptions.map((role) => {
+                  const isSelected = formData.role === role.value;
+                  return (
+                    <label 
+                      key={role.value}
+                      style={{ 
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 'var(--space-3)',
+                        padding: 'var(--space-4)',
+                        border: `2px solid ${isSelected ? 'var(--color-secondary)' : 'var(--color-gray-200)'}`,
+                        borderRadius: 'var(--radius-lg)',
+                        background: isSelected ? 'var(--color-secondary-bg)' : 'var(--color-white)',
+                        cursor: 'pointer',
+                        transition: 'all var(--transition-fast)',
+                        boxShadow: isSelected ? '0 0 0 1px var(--color-secondary)' : 'var(--shadow-xs)'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="role"
+                        value={role.value}
+                        checked={isSelected}
+                        onChange={handleChange}
+                        style={{ marginTop: '3px', accentColor: 'var(--color-secondary)' }}
+                      />
+                      <div>
+                        <div style={{ 
+                          fontSize: 'var(--font-size-base)', 
+                          fontWeight: 700, 
+                          color: isSelected ? 'var(--color-secondary)' : 'var(--color-text-primary)' 
+                        }}>
+                          {role.value === 'PATIENT' ? '🏥 Patient Account' : '👨‍👩‍👧‍👦 Family Guardian'}
+                        </div>
+                        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                          {role.value === 'PATIENT' ? 'Personal vitals monitoring, SOS trigger & health records' : 'Monitor linked family members & receive active alerts'}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
               </div>
             </div>
 
             {/* Personal Information */}
-            <div style={{ borderTop: '1px solid var(--color-gray-200)', paddingTop: 'var(--space-5)' }}>
+            <div style={{
+              background: '#F8FAFD',
+              border: '1px solid var(--color-gray-200)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-5)'
+            }}>
               <h3 style={{ 
-                fontSize: 'var(--font-size-lg)', 
-                fontWeight: 'var(--font-weight-bold)',
-                color: 'var(--color-gray-900)',
+                fontSize: 'var(--font-size-base)', 
+                fontWeight: 800,
+                color: 'var(--color-text-primary)',
                 marginBottom: 'var(--space-4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}>
-                Personal Information
+                <span>👤</span>
+                <span>Personal & Account Credentials</span>
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-4)' }}>
-                <div className="form-group">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" htmlFor="fullName">Full Name</label>
                   <input
                     type="text"
@@ -208,7 +258,7 @@ const Signup = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" htmlFor="email">Email Address</label>
                   <input
                     type="email"
@@ -222,14 +272,14 @@ const Signup = () => {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" htmlFor="password">Password</label>
                   <input
                     type="password"
                     id="password"
                     name="password"
                     className="form-input"
-                    placeholder="•••••••• (min 8 characters)"
+                    placeholder="•••••••• (min 8 chars)"
                     value={formData.password}
                     onChange={handleChange}
                     required
@@ -239,14 +289,14 @@ const Signup = () => {
 
                 {formData.role === 'PATIENT' && (
                   <>
-                    <div className="form-group">
+                    <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" htmlFor="age">Age</label>
                       <input
                         type="number"
                         id="age"
                         name="age"
                         className="form-input"
-                        placeholder="45"
+                        placeholder="e.g. 45"
                         value={formData.age}
                         onChange={handleChange}
                         min="1"
@@ -254,7 +304,7 @@ const Signup = () => {
                       />
                     </div>
 
-                    <div className="form-group">
+                    <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label" htmlFor="bloodGroup">Blood Group</label>
                       <select
                         id="bloodGroup"
@@ -264,7 +314,7 @@ const Signup = () => {
                         onChange={handleChange}
                       >
                         <option value="">Select Blood Group</option>
-                        {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                        {bloodGroups.map(bg => (
                           <option key={bg} value={bg}>{bg}</option>
                         ))}
                       </select>
@@ -274,82 +324,108 @@ const Signup = () => {
               </div>
             </div>
 
-            {/* Contact Information */}
-            <div style={{ borderTop: '1px solid var(--color-gray-200)', paddingTop: 'var(--space-5)' }}>
+            {/* Contact & Location Information */}
+            <div style={{
+              background: '#F8FAFD',
+              border: '1px solid var(--color-gray-200)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-5)'
+            }}>
               <h3 style={{ 
-                fontSize: 'var(--font-size-lg)', 
-                fontWeight: 'var(--font-weight-bold)',
-                color: 'var(--color-gray-900)',
+                fontSize: 'var(--font-size-base)', 
+                fontWeight: 800,
+                color: 'var(--color-text-primary)',
                 marginBottom: 'var(--space-4)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}>
-                Contact Information
+                <span>📍</span>
+                <span>Contact & Emergency Geolocation</span>
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-4)' }}>
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label className="form-label" htmlFor="address">Address</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-4)' }}>
+                <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="address">Physical Residence Address</label>
                   <input
                     type="text"
                     id="address"
                     name="address"
                     className="form-input"
-                    placeholder="Street address, City, State"
+                    placeholder="Street address, Apartment, City, State"
                     value={formData.address}
                     onChange={handleChange}
                     required
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Geographic Coordinates</label>
-                  <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+                <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label className="form-label" style={{ marginBottom: 0 }}>Emergency Dispatch GPS Coordinates</label>
+                    <span style={{ fontSize: '11px', color: 'var(--color-teal)', fontWeight: 700 }}>Ensures sub-minute ambulance routing</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                     <input
                       type="number"
                       step="any"
                       name="latitude"
                       className="form-input"
-                      placeholder="Latitude"
+                      placeholder="Latitude (e.g. 12.9716)"
                       value={formData.latitude}
                       onChange={handleChange}
                       required
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, minWidth: '140px' }}
                     />
                     <input
                       type="number"
                       step="any"
                       name="longitude"
                       className="form-input"
-                      placeholder="Longitude"
+                      placeholder="Longitude (e.g. 77.5946)"
                       value={formData.longitude}
                       onChange={handleChange}
                       required
-                      style={{ flex: 1 }}
+                      style={{ flex: 1, minWidth: '140px' }}
                     />
                     <button 
                       type="button" 
                       onClick={handleGeoLocation}
                       className="btn btn-secondary"
-                      style={{ alignSelf: 'flex-end', height: '43px', padding: '0 var(--space-4)' }}
+                      style={{ height: '42px', padding: '0 var(--space-4)', fontWeight: 700, gap: '6px' }}
+                      title="Auto-detect current GPS coordinates"
                     >
-                      📍 Detect
+                      <span>🛰️</span>
+                      <span>Auto-Detect GPS</span>
                     </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Emergency Contact (Patient only) */}
+            {/* Primary Doctor Referral (Patient only) */}
             {formData.role === 'PATIENT' && (
-              <div style={{ borderTop: '1px solid var(--color-gray-200)', paddingTop: 'var(--space-5)' }}>
-                <h3 style={{ 
-                  fontSize: 'var(--font-size-lg)', 
-                  fontWeight: 'var(--font-weight-bold)',
-                  color: 'var(--color-gray-900)',
-                  marginBottom: 'var(--space-4)',
-                }}>
-                  Primary Doctor Referral (Optional)
-                </h3>
+              <div style={{
+                background: '#F8FAFD',
+                border: '1px solid var(--color-gray-200)',
+                borderRadius: 'var(--radius-lg)',
+                padding: 'var(--space-5)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)' }}>
+                  <h3 style={{ 
+                    fontSize: 'var(--font-size-base)', 
+                    fontWeight: 800,
+                    color: 'var(--color-text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: 0
+                  }}>
+                    <span>🩺</span>
+                    <span>Primary Doctor Referral</span>
+                  </h3>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', background: 'var(--color-white)', padding: '2px 8px', borderRadius: '4px', border: '1px solid var(--color-gray-200)' }}>Optional</span>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)' }}>
-                  <div className="form-group">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label" htmlFor="doctorName">Doctor Name</label>
                     <input
                       type="text"
@@ -361,7 +437,7 @@ const Signup = () => {
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label" htmlFor="doctorPhone">Doctor Phone</label>
                     <input
                       type="tel"
@@ -373,7 +449,7 @@ const Signup = () => {
                       onChange={handleChange}
                     />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label" htmlFor="doctorHospital">Associated Hospital</label>
                     <input
                       type="text"
@@ -392,17 +468,26 @@ const Signup = () => {
             {/* Submit */}
             <button 
               type="submit" 
-              className="btn btn-primary btn-lg w-full"
+              className="btn btn-blue btn-lg w-full"
               disabled={loading}
-              style={{ padding: 'var(--space-3)', fontSize: 'var(--font-size-base)', marginTop: 'var(--space-2)' }}
+              style={{
+                padding: '14px',
+                fontSize: '1rem',
+                fontWeight: 800,
+                marginTop: 'var(--space-2)',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.28)'
+              }}
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? 'Creating VitalGuard Account...' : '✓ Complete Registration & Open Dashboard'}
             </button>
           </form>
 
           {/* Footer */}
-          <div style={{ textAlign: 'center', marginTop: 'var(--space-6)', fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-500)' }}>
-            Already have an account? <Link to="/login" style={{ color: 'var(--color-primary)', fontWeight: 'var(--font-weight-semibold)', textDecoration: 'none' }}>Sign In</Link>
+          <div style={{ textAlign: 'center', marginTop: 'var(--space-6)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>
+            Already registered on VitalGuard?{' '}
+            <Link to="/login" style={{ color: 'var(--color-secondary)', fontWeight: 700, textDecoration: 'none' }}>
+              Sign In to Your Account
+            </Link>
           </div>
         </div>
       </div>

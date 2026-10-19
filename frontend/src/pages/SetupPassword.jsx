@@ -14,6 +14,7 @@ export default function SetupPassword() {
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -68,24 +69,47 @@ export default function SetupPassword() {
     }
   };
 
+  const getPasswordStrength = () => {
+    if (!newPassword) return 0;
+    let score = 0;
+    if (newPassword.length >= 6) score += 33;
+    if (newPassword.length >= 8) score += 33;
+    if (/[A-Z]/.test(newPassword) && /[0-9!@#$%^&*]/.test(newPassword)) score += 34;
+    return score;
+  };
+
+  const strength = getPasswordStrength();
+
   return (
     <div style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'var(--bg-main, #f8f9fb)',
+      background: 'radial-gradient(circle at 50% 0%, #1e3a8a 0%, #0B1F3A 70%, #050d1a 100%)',
       padding: '24px',
-      fontFamily: 'Inter, sans-serif'
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      position: 'relative'
     }}>
-      <div className="saas-card" style={{
-        maxWidth: '460px',
+      {/* Decorative Grid Mesh */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage: 'radial-gradient(rgba(13, 148, 136, 0.15) 1px, transparent 1px)',
+        backgroundSize: '24px 24px',
+        opacity: 0.6,
+        pointerEvents: 'none'
+      }} />
+
+      <div className="card" style={{
+        maxWidth: '480px',
         width: '100%',
-        padding: '36px',
+        padding: '36px 32px',
         background: '#ffffff',
-        borderRadius: '16px',
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
-        border: '1px solid var(--border-color, #e2e8f0)'
+        borderRadius: '20px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+        position: 'relative',
+        zIndex: 1
       }}>
         {/* Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
@@ -93,29 +117,39 @@ export default function SetupPassword() {
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '52px',
-            height: '52px',
-            borderRadius: '14px',
-            background: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+            width: '56px',
+            height: '56px',
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, #0D9488 0%, #2563EB 100%)',
             color: '#fff',
             fontSize: '24px',
             marginBottom: '14px',
-            boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)'
+            boxShadow: '0 8px 20px rgba(13, 148, 136, 0.3)'
           }}>
             🔐
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary, #0f172a)', margin: '0 0 6px 0' }}>
-            Account Password Setup
+          <div style={{
+            fontSize: '11px',
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: '#0D9488',
+            marginBottom: '4px'
+          }}>
+            Privileged Access Activation
+          </div>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0B1F3A', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+            Set Account Password
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary, #64748b)', margin: 0 }}>
-            VitalGuard Secure Privileged Account Activation
+          <p style={{ fontSize: '13px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+            VitalGuard Secure Clinical & Dispatch Network
           </p>
         </div>
 
         {verifying && (
-          <div style={{ textAlign: 'center', padding: '32px 0' }}>
-            <div className="status-spinner" style={{ margin: '0 auto 16px auto' }}></div>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary, #64748b)' }}>Verifying activation token...</p>
+          <div style={{ textAlign: 'center', padding: '36px 0' }}>
+            <div className="status-spinner" style={{ margin: '0 auto 16px auto', width: '36px', height: '36px', borderWidth: '3px' }} />
+            <p style={{ fontSize: '14px', color: '#64748B', fontWeight: 500 }}>Verifying cryptographic activation token...</p>
           </div>
         )}
 
@@ -125,18 +159,22 @@ export default function SetupPassword() {
               background: '#fef2f2',
               border: '1px solid #fecaca',
               color: '#991b1b',
-              padding: '16px',
-              borderRadius: '10px',
+              padding: '18px',
+              borderRadius: '12px',
               fontSize: '14px',
               marginBottom: '24px',
-              lineHeight: 1.5
+              lineHeight: 1.5,
+              textAlign: 'left'
             }}>
-              ⚠️ {verifyError}
+              <div style={{ fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>⚠️</span> Link Expired or Invalid
+              </div>
+              <div>{verifyError}</div>
             </div>
             <Link
               to="/login"
-              className="btn btn-secondary"
-              style={{ width: '100%', display: 'inline-block', textAlign: 'center', textDecoration: 'none' }}
+              className="btn btn-primary"
+              style={{ width: '100%', display: 'inline-block', textAlign: 'center', textDecoration: 'none', padding: '12px' }}
             >
               Return to Login
             </Link>
@@ -149,24 +187,40 @@ export default function SetupPassword() {
               background: '#f0fdf4',
               border: '1px solid #bbf7d0',
               color: '#166534',
-              padding: '20px',
-              borderRadius: '12px',
+              padding: '24px 20px',
+              borderRadius: '14px',
               fontSize: '14px',
               marginBottom: '24px',
               lineHeight: 1.6
             }}>
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>✓</div>
-              <strong>Password Set Successfully!</strong>
-              <p style={{ margin: '8px 0 0 0' }}>
-                Your account is now <strong>ACTIVE</strong>. You can now log in to access your role-specific dashboard.
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: '#dcfce7',
+                color: '#16A34A',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                fontWeight: 800,
+                marginBottom: '10px'
+              }}>
+                ✓
+              </div>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#166534', marginBottom: '4px' }}>
+                Password Set Successfully!
+              </div>
+              <p style={{ margin: '8px 0 0 0', color: '#15803d' }}>
+                Your account is now <strong>ACTIVE</strong> with verified credentials. You can now log in to access your role-specific console.
               </p>
             </div>
             <button
               onClick={() => navigate('/login')}
               className="btn btn-primary"
-              style={{ width: '100%', padding: '12px', fontSize: '15px' }}
+              style={{ width: '100%', padding: '13px', fontSize: '15px', fontWeight: 700 }}
             >
-              Proceed to Login
+              Proceed to Login →
             </button>
           </div>
         )}
@@ -175,20 +229,20 @@ export default function SetupPassword() {
           <div>
             {/* User Details Preview */}
             <div style={{
-              background: 'var(--bg-main, #f8f9fb)',
-              border: '1px solid var(--border-color, #e2e8f0)',
-              borderRadius: '10px',
+              background: '#F5F8FC',
+              border: '1px solid #E2E8F0',
+              borderRadius: '12px',
               padding: '14px 16px',
               marginBottom: '20px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted, #94a3b8)' }}>ACCOUNT</span>
-                <StatusBadge status={tokenDetails.role} />
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748B', letterSpacing: '0.04em' }}>VERIFIED ACCOUNT</span>
+                <StatusBadge status={tokenDetails.role} size="sm" />
               </div>
-              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary, #0f172a)' }}>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#172B4D' }}>
                 {tokenDetails.fullName || tokenDetails.email}
               </div>
-              <div style={{ fontSize: '13px', color: 'var(--text-secondary, #64748b)' }}>
+              <div style={{ fontSize: '13px', color: '#64748B', marginTop: '2px' }}>
                 {tokenDetails.email}
               </div>
             </div>
@@ -198,23 +252,44 @@ export default function SetupPassword() {
                 background: '#fef2f2',
                 border: '1px solid #fecaca',
                 color: '#991b1b',
-                padding: '12px',
-                borderRadius: '8px',
+                padding: '12px 14px',
+                borderRadius: '10px',
                 fontSize: '13px',
-                marginBottom: '16px'
+                marginBottom: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}>
-                {submitError}
+                <span>⚠️</span>
+                <span>{submitError}</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary, #0f172a)', marginBottom: '6px' }}>
-                  New Password
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 700, color: '#172B4D' }}>
+                    New Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#0D9488',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0
+                    }}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
                 <input
-                  type="password"
-                  className="input-field"
+                  type={showPassword ? 'text' : 'password'}
+                  className="form-input"
                   placeholder="Enter secure password (min. 6 characters)"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -222,16 +297,40 @@ export default function SetupPassword() {
                   autoFocus
                   style={{ width: '100%', boxSizing: 'border-box' }}
                 />
+
+                {/* Password strength bar */}
+                {newPassword && (
+                  <div style={{ marginTop: '8px' }}>
+                    <div style={{
+                      height: '4px',
+                      width: '100%',
+                      background: '#E2E8F0',
+                      borderRadius: '2px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${strength}%`,
+                        background: strength > 70 ? '#16A34A' : strength > 35 ? '#F59E0B' : '#DC2626',
+                        transition: 'all 0.2s ease'
+                      }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
+                      <span>Strength</span>
+                      <span>{strength > 70 ? 'Strong' : strength > 35 ? 'Moderate' : 'Weak (min. 6 chars)'}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary, #0f172a)', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#172B4D', marginBottom: '6px' }}>
                   Confirm Password
                 </label>
                 <input
-                  type="password"
-                  className="input-field"
-                  placeholder="Confirm your password"
+                  type={showPassword ? 'text' : 'password'}
+                  className="form-input"
+                  placeholder="Re-enter your password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
@@ -245,13 +344,14 @@ export default function SetupPassword() {
                 className="btn btn-primary"
                 style={{
                   width: '100%',
-                  padding: '12px',
+                  padding: '13px',
                   fontSize: '15px',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)'
                 }}
               >
                 {submitting ? 'Setting Password...' : 'Activate Account & Set Password'}
@@ -263,3 +363,4 @@ export default function SetupPassword() {
     </div>
   );
 }
+

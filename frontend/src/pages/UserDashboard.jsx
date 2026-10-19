@@ -9,6 +9,7 @@ import EmergencyAlert from '../components/EmergencyAlert';
 import StatusBadge from '../components/StatusBadge';
 import GoogleMapTracking from '../components/GoogleMapTracking';
 import ConfirmModal from '../components/ConfirmModal';
+import CancelEmergencyModal from '../components/CancelEmergencyModal';
 import { EmptyState } from '../components/StateComponents';
 
 const getWorkflowAmbulanceStatus = (sos, tracking) => {
@@ -95,7 +96,7 @@ const UserDashboard = () => {
   }, []);
 
   // WebSocket real-time subscription
-  const { connected: wsConnected, revision, refresh, tracking: trackingData } = useRealtimeRefresh(user?.uid, trackedEmergencyId, user?.uid, user);
+  const { connected: wsConnected, revision, refresh, tracking: trackingData, ambulanceLocation } = useRealtimeRefresh(user?.uid, trackedEmergencyId, user?.uid, user);
 
   // Vitals history from API
   const { data: storedVitals } = useApiResource('/vitals/history', revision);
@@ -158,6 +159,55 @@ const UserDashboard = () => {
   const [symptomList, setSymptomList] = useState(['Chest Pain']);
   const [symptomDesc, setSymptomDesc] = useState('');
   const [isDispatching, setIsDispatching] = useState(false);
+
+  // Cancellation modal & notification state
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [emergencyToCancel, setEmergencyToCancel] = useState(null);
+  const [isCancellingSos, setIsCancellingSos] = useState(false);
+  const [cancelError, setCancelError] = useState(null);
+  const [cancellationNotification, setCancellationNotification] = useState(null);
+
+  const handleOpenCancelModal = (sos) => {
+    setEmergencyToCancel(sos || activeSos);
+    setCancelError(null);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleCloseCancelModal = () => {
+    if (!isCancellingSos) {
+      setIsCancelModalOpen(false);
+      setCancelError(null);
+    }
+  };
+
+  const handleConfirmCancellation = async () => {
+    const targetSos = emergencyToCancel || activeSos;
+    if (!targetSos?.id) return;
+
+    setIsCancellingSos(true);
+    setCancelError(null);
+
+    try {
+      const res = await API.post(`/emergency/${targetSos.id}/cancel`);
+      if (res.status === 200 || res.status === 204 || res.data?.success) {
+        setIsCancelModalOpen(false);
+        setEmergencyToCancel(null);
+        setCancellationNotification({
+          type: 'success',
+          message: `Emergency SOS-${targetSos.id} was successfully cancelled.`
+        });
+        refresh();
+      } else {
+        const msg = res.data?.message || 'Failed to cancel emergency request. Emergency remains active.';
+        setCancelError(msg);
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to cancel emergency request. Emergency remains active.';
+      setCancelError(msg);
+    } finally {
+      setIsCancellingSos(false);
+    }
+  };
 
   // Simulation mode
   const [simulating, setSimulating] = useState(false);
@@ -526,6 +576,7 @@ const UserDashboard = () => {
             <EmergencyAlert
               emergency={activeSos}
               onView={() => switchTab('emergency')}
+              onCancel={() => handleOpenCancelModal(activeSos)}
               role="patient"
               isAccepted={true}
             />
@@ -940,20 +991,33 @@ const UserDashboard = () => {
         {/* Section 4: Premium Emergency Status Card */}
         <div className="active-emergency-status-card">
           <div className="emergency-status-row">
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '22px' }}>🚨</span>
-                <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-critical)' }}>
-                  ACTIVE EMERGENCY (SOS-{activeSos.id})
-                </span>
-                <StatusBadge status={activeSos.severity || 'CRITICAL'} size="sm" />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)', width: '100%' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '22px' }}>🚨</span>
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-critical)' }}>
+                    ACTIVE EMERGENCY (SOS-{activeSos.id})
+                  </span>
+                  <StatusBadge status={activeSos.severity || 'CRITICAL'} size="sm" />
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
+                  Incident registered: {new Date(activeSos.createdAt || Date.now()).toLocaleTimeString()}
+                </div>
               </div>
-              <div style={{ fontSize: '12px', color: 'var(--color-gray-500)', marginTop: '4px' }}>
-                Incident registered: {new Date(activeSos.createdAt || Date.now()).toLocaleTimeString()}
-              </div>
+
+              {/* Cancel Emergency action on Active Emergency Card */}
+              <button
+                type="button"
+                onClick={() => handleOpenCancelModal(activeSos)}
+                className="btn btn-cancel-emergency"
+                aria-label="Cancel Emergency"
+              >
+                <span aria-hidden="true" style={{ fontWeight: 800 }}>✕</span>
+                <span>Cancel Emergency</span>
+              </button>
             </div>
 
-            <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap', width: '100%' }}>
               <div className="emergency-status-item">
                 <span className="emergency-status-label">Risk Score</span>
                 <span className="emergency-status-value" style={{ color: 'var(--color-critical)' }}>
@@ -1003,11 +1067,11 @@ const UserDashboard = () => {
 
             <GoogleMapTracking
               patientLocation={[activeSos.latitude, activeSos.longitude]}
-              hospitalLocation={assignedHospital ? [assignedHospital.lat, assignedHospital.lng] : null}
-              ambulanceLocation={trackingData?.ambulanceLatitude ? [trackingData.ambulanceLatitude, trackingData.ambulanceLongitude] : null}
-              ambulanceStatus={trackingData?.status || activeSos.status}
-              ambulanceUnitId={trackingData?.ambulanceUnitId || activeSos.ambulanceUnitId || 'AMB-102'}
-              driverName={trackingData?.driverName}
+              hospitalLocation={assignedHospital ? [assignedHospital.lat, assignedHospital.lng] : (activeSos.hospitalLat && activeSos.hospitalLng ? [activeSos.hospitalLat, activeSos.hospitalLng] : null)}
+              ambulanceLocation={ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : (trackingData?.latitude != null ? [trackingData.latitude, trackingData.longitude] : (activeSos.ambulanceLat && activeSos.ambulanceLng ? [activeSos.ambulanceLat, activeSos.ambulanceLng] : null))}
+              ambulanceStatus={ambulanceLocation?.status || trackingData?.status || activeSos.status}
+              ambulanceUnitId={ambulanceLocation?.unitId || trackingData?.ambulanceUnitId || activeSos.ambulanceUnitId || 'AMB-102'}
+              driverName={trackingData?.driverName || activeSos.driverName}
               emergencyId={activeSos.id}
               height="440px"
             />
@@ -1125,6 +1189,53 @@ const UserDashboard = () => {
       user={user}
       wsConnected={wsConnected}
     >
+      {/* Cancellation Success / Error Notification Banner */}
+      {cancellationNotification && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            background: cancellationNotification.type === 'success' ? 'var(--color-success-bg, #ECFDF5)' : 'var(--color-critical-bg, #FEF2F2)',
+            border: `1.5px solid ${cancellationNotification.type === 'success' ? 'var(--color-success-border, #A7F3D0)' : 'var(--color-critical-border, #FECACA)'}`,
+            borderRadius: 'var(--radius-lg, 12px)',
+            padding: '12px 18px',
+            marginBottom: 'var(--space-4, 16px)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '12px',
+            animation: 'fadeIn 0.25s ease-out'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '20px' }}>
+              {cancellationNotification.type === 'success' ? '✓' : '⚠️'}
+            </span>
+            <div>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: 800,
+                color: cancellationNotification.type === 'success' ? 'var(--color-success, #059669)' : 'var(--color-critical, #DC2626)'
+              }}>
+                {cancellationNotification.type === 'success' ? 'Emergency Request Cancelled' : 'Cancellation Warning'}
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--color-gray-700, #334155)', marginTop: '2px' }}>
+                {cancellationNotification.message}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCancellationNotification(null)}
+            className="btn btn-ghost btn-sm"
+            style={{ color: 'var(--color-gray-500)', fontSize: '16px' }}
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Top Tab Switcher */}
       <div style={{
         display: 'flex',
@@ -1188,6 +1299,16 @@ const UserDashboard = () => {
         description={symptomDesc}
         onDescriptionChange={setSymptomDesc}
         isSubmitting={isDispatching}
+      />
+
+      {/* Cancel Emergency Confirmation Modal */}
+      <CancelEmergencyModal
+        isOpen={isCancelModalOpen}
+        emergency={emergencyToCancel || activeSos}
+        onClose={handleCloseCancelModal}
+        onConfirm={handleConfirmCancellation}
+        isCancelling={isCancellingSos}
+        error={cancelError}
       />
     </DashboardLayout>
   );

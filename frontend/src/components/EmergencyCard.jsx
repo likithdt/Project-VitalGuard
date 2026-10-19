@@ -5,6 +5,7 @@ const EmergencyCard = ({
   emergency, 
   onClick, 
   onAccept,
+  onCancel,
   variant = 'default', // default, compact, alert
   selected = false,
   showActions = false,
@@ -21,6 +22,9 @@ const EmergencyCard = ({
   const severityClass = severityColors[emergency?.severity] || 'secondary';
   const statusClass = `status-${(emergency?.status || '').toLowerCase().replace(/_/g, '-')}`;
   const ambulanceRequired = emergency?.requiresAmbulance === true || emergency?.requiresAmbulance === 'true';
+
+  const isEmergencyActive = !emergency?.cancelled && !['RESOLVED', 'COMPLETED', 'CANCELLED'].includes(emergency?.status?.toUpperCase());
+  const canCancel = Boolean(onCancel && isEmergencyActive);
 
   const formatVitals = (vitals) => {
     if (!vitals) return 'No vitals recorded';
@@ -99,7 +103,7 @@ const EmergencyCard = ({
               </span>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', alignItems: 'center' }}>
             {showActions && role === 'hospital' && emergency?.status === 'HOSPITAL_ASSIGNED' && (
               <>
                 <button 
@@ -128,13 +132,26 @@ const EmergencyCard = ({
               </button>
             )}
             {showActions && role !== 'hospital' && (
-              <button 
-                onClick={(e) => { e.stopPropagation(); onClick?.(emergency); }}
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-              >
-                👁 View Details
-              </button>
+              <>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onClick?.(emergency); }}
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                >
+                  👁 View Details
+                </button>
+                {canCancel && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onCancel?.(emergency); }}
+                    className="btn btn-cancel-emergency"
+                    type="button"
+                    aria-label="Cancel Emergency"
+                  >
+                    <span aria-hidden="true">✕</span>
+                    <span>Cancel Emergency</span>
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

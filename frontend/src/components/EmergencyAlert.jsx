@@ -12,6 +12,7 @@ const EmergencyAlert = ({
   onView,
   onAccept,
   onDecline,
+  onCancel,
   role = 'hospital',
   isAccepted = false
 }) => {
@@ -24,6 +25,10 @@ const EmergencyAlert = ({
   // Extract or parse detected vitals
   const vitalsText = emergency.detectedVitals || 'HR 145 BPM • SpO2 82% • Temp 39.8°C';
   const requiresAmbulance = emergency.requiresAmbulance !== false;
+
+  // Cancellation is permitted only when emergency is active and not already terminal
+  const isEmergencyActive = !emergency.cancelled && !['RESOLVED', 'COMPLETED', 'CANCELLED'].includes(emergency.status?.toUpperCase());
+  const canCancel = Boolean(onCancel && isEmergencyActive);
 
   return (
     <div className="incoming-alert-card" role="alert" aria-live="assertive">
@@ -99,7 +104,8 @@ const EmergencyAlert = ({
         justifyContent: 'flex-end',
         gap: 'var(--space-3)',
         borderTop: '1px solid rgba(220, 38, 38, 0.15)',
-        paddingTop: 'var(--space-4)'
+        paddingTop: 'var(--space-4)',
+        flexWrap: 'wrap'
       }}>
         {onDecline && (
           <button onClick={() => onDecline(emergency.id)} className="btn btn-secondary btn-sm">
@@ -113,6 +119,19 @@ const EmergencyAlert = ({
           </button>
         )}
 
+        {/* Cancel Emergency button next to View Details */}
+        {canCancel && (
+          <button
+            type="button"
+            onClick={() => onCancel(emergency)}
+            className="btn btn-cancel-emergency"
+            aria-label="Cancel Emergency"
+          >
+            <span aria-hidden="true" style={{ fontWeight: 800 }}>✕</span>
+            <span>Cancel Emergency</span>
+          </button>
+        )}
+
         {onAccept && !isAccepted && (
           <button
             onClick={() => onAccept(emergency.id)}
@@ -123,7 +142,7 @@ const EmergencyAlert = ({
           </button>
         )}
 
-        {isAccepted && (
+        {isAccepted && role !== 'patient' && (
           <span style={{
             display: 'inline-flex',
             alignItems: 'center',

@@ -16,11 +16,16 @@ export function TimelineView({ events }) {
 export function AssignmentSummary({ emergency }) {
   const active = isActiveEmergency(emergency);
   const assignment = (name, id, type) => name || (id != null ? `${type} assigned (name unavailable)` : active ? 'Pending assignment' : 'Not recorded');
+  const ambText = emergency.ambulanceUnitId ? `Unit ${emergency.ambulanceUnitId}${emergency.driverName ? ` (Driver: ${emergency.driverName})` : ''}` : (emergency.requiresAmbulance ? 'Requested / Searching nearest unit' : 'Not required');
+  const ambStatusText = emergency.ambulanceStatus ? emergency.ambulanceStatus.replace(/_/g, ' ') : (emergency.requiresAmbulance ? 'DISPATCH PENDING' : 'STANDBY');
+
   return <RecordedFields fields={[
     ['Hospital', assignment(emergency.hospitalName, emergency.hospitalId, 'Hospital')],
     ['Doctor', assignment(emergency.doctorName, emergency.doctorId, 'Doctor')],
-    ['Hospital distance', emergency.hospitalDistance, ' km'],
-    ['Estimated arrival', emergency.hospitalEta, typeof emergency.hospitalEta === 'number' ? ' min' : ''],
+    ['Ambulance unit', ambText],
+    ['Ambulance status', ambStatusText],
+    ['Hospital distance', emergency.hospitalDistance != null ? emergency.hospitalDistance : '—', emergency.hospitalDistance != null ? ' km' : ''],
+    ['Estimated arrival', emergency.hospitalEta != null ? emergency.hospitalEta : '—', typeof emergency.hospitalEta === 'number' ? ' min' : ''],
   ]} />;
 }
 

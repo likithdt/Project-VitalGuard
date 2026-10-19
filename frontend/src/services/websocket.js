@@ -25,6 +25,8 @@ export function useRealtimeRefresh(uid, emergencyId, patientUid = uid, user = nu
   const [revision, setRevision] = useState(0);
   const [tracking, setTracking] = useState(null);
   const [ambulanceLocation, setAmbulanceLocation] = useState(null);
+  const [ambulanceLocationsMap, setAmbulanceLocationsMap] = useState({});
+  const [lastEvent, setLastEvent] = useState(null);
   const [client, setClient] = useState(null);
   const timer = useRef(null);
   const refresh = useCallback(() => setRevision(value => value + 1), []);
@@ -62,7 +64,7 @@ export function useRealtimeRefresh(uid, emergencyId, patientUid = uid, user = nu
       timer.current = setTimeout(() => {
         timer.current = null;
         refresh();
-      }, 500);
+      }, 350);
     };
     const topics = ['/topic/emergency-updates', '/topic/hospital-queue-refresh'];
     if (patientUid) topics.push(`/topic/vitals/${patientUid}`, `/topic/ai-risk/${patientUid}`, `/topic/family-notifications/${patientUid}`);
@@ -85,20 +87,36 @@ export function useRealtimeRefresh(uid, emergencyId, patientUid = uid, user = nu
       scheduleRefresh();
       try {
         const data = JSON.parse(message.body);
+        if (data && typeof data === 'object') {
+          setLastEvent({
+            ...data,
+            _receivedAt: Date.now(),
+            _topic: topic
+          });
+        }
         
-        // Handle ambulance location updates
-        if (topic.startsWith('/topic/ambulance/') && data.latitude != null && data.longitude != null) {
-          setAmbulanceLocation({
-            latitude: data.latitude,
-            longitude: data.longitude,
+        // Handle ambulance location updates from ambulance or emergency topics
+        const hasCoordinates = data.latitude != null && data.longitude != null;
+        if (hasCoordinates && (topic.startsWith('/topic/ambulance/') || topic === `/topic/emergency/${emergencyId}` || topic === '/topic/emergency-updates')) {
+          const locObj = {
+            latitude: Number(data.latitude),
+            longitude: Number(data.longitude),
             status: data.status,
             ambulanceId: data.ambulanceId,
-            unitId: data.unitId,
+            unitId: data.unitId || data.ambulanceUnitId,
             timestamp: data.timestamp,
-            emergencyId: data.emergencyId,
-            distance: data.distance,
-            eta: data.eta
-          });
+            emergencyId: data.emergencyId || emergencyId,
+            distance: data.distance || data.distanceKm,
+            eta: data.eta || data.etaMinutes
+          };
+          setAmbulanceLocation(locObj);
+          const key = data.emergencyId || data.ambulanceId;
+          if (key) {
+            setAmbulanceLocationsMap(prev => ({
+              ...prev,
+              [key]: locObj
+            }));
+          }
         }
         
         // Handle emergency tracking updates - accept updates from all relevant topics
@@ -111,10 +129,18 @@ export function useRealtimeRefresh(uid, emergencyId, patientUid = uid, user = nu
         
         if (isEmergencyUpdate && data && emergencyId != null && 
             (String(data.emergencyId) === String(emergencyId) || String(data.sosId) === String(emergencyId))) {
-          setTracking({ ...data, emergencyId });
+          setTracking(prev => ({
+            ...(prev || {}),
+            ...data,
+            emergencyId
+          }));
         }
         if (topic.includes('ambulance/request') && data) {
-          setTracking({ ...data, emergencyId: data.emergencyId });
+          setTracking(prev => ({
+            ...(prev || {}),
+            ...data,
+            emergencyId: data.emergencyId || emergencyId
+          }));
         }
       } catch {
         return;
@@ -129,7 +155,15 @@ export function useRealtimeRefresh(uid, emergencyId, patientUid = uid, user = nu
     };
   }, [client, connected, patientUid, emergencyId, refresh, user]);
 
-  return { connected, revision, refresh, tracking: tracking?.emergencyId === emergencyId ? tracking : null, ambulanceLocation };
+  return { 
+    connected, 
+    revision, 
+    refresh, 
+    tracking: tracking?.emergencyId === emergencyId ? tracking : null, 
+    ambulanceLocation,
+    ambulanceLocationsMap,
+    lastEvent
+  };
 }
 
 // New hook for ambulance driver to send location updates

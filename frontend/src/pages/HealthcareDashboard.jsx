@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import API, { isActiveEmergency, useApiResource } from '../services/api';
 import { useRealtimeRefresh } from '../services/websocket';
@@ -34,6 +34,17 @@ const HealthcareDashboard = () => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [currentJob, setCurrentJob] = useState(null);
   const [isDriverAvailable, setIsDriverAvailable] = useState(true);
+  const [driverNotification, setDriverNotification] = useState(null);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isSimulatingGps, setIsSimulatingGps] = useState(false);
+  const gpsIntervalRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (gpsIntervalRef.current) clearInterval(gpsIntervalRef.current);
+    };
+  }, []);
 
   // WebSocket real-time subscription
   const {
@@ -213,32 +224,109 @@ const HealthcareDashboard = () => {
 
   const acceptDriverRequest = async (requestId) => {
     try {
+      setActionLoadingId(requestId);
       await API.post(`/ambulance/requests/${requestId}/accept`);
-      loadDriverData();
+      setDriverNotification({
+        type: 'success',
+        message: 'Dispatch accepted! Live GPS navigation & ambulance telemetry tracking are now active.'
+      });
+      await loadDriverData();
       refresh();
     } catch (err) {
-      alert('Failed to accept: ' + (err.response?.data?.error || err.message));
+      setDriverNotification({
+        type: 'error',
+        message: 'Failed to accept dispatch: ' + (err.response?.data?.error || err.message)
+      });
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
   const declineDriverRequest = async (requestId) => {
     try {
+      setActionLoadingId(requestId);
       await API.post(`/ambulance/requests/${requestId}/decline`);
-      loadDriverData();
+      setDriverNotification({
+        type: 'warning',
+        message: 'Dispatch request declined. The dispatch system has automatically released this incident to locate and re-route to another available ambulance unit.'
+      });
+      await loadDriverData();
       refresh();
     } catch (err) {
-      alert('Failed to decline request: ' + (err.response?.data?.error || err.message));
+      setDriverNotification({
+        type: 'error',
+        message: 'Failed to decline request: ' + (err.response?.data?.error || err.message)
+      });
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
   const updateAmbulanceStatus = async (status) => {
     try {
+      setIsUpdatingStatus(true);
       await API.post('/ambulance/status', { status });
-      loadDriverData();
+      setDriverNotification({
+        type: 'success',
+        message: `Ambulance unit progression updated: ${status.replace(/_/g, ' ')}`
+      });
+      await loadDriverData();
       refresh();
     } catch (err) {
-      alert('Failed to update ambulance status: ' + (err.response?.data?.error || err.message));
+      setDriverNotification({
+        type: 'error',
+        message: 'Failed to update ambulance status: ' + (err.response?.data?.error || err.message)
+      });
+    } finally {
+      setIsUpdatingStatus(false);
     }
+  };
+
+  const toggleGpsSimulation = (emergency) => {
+    if (isSimulatingGps) {
+      if (gpsIntervalRef.current) clearInterval(gpsIntervalRef.current);
+      gpsIntervalRef.current = null;
+      setIsSimulatingGps(false);
+      setDriverNotification({ type: 'info', message: 'Live GPS route simulation paused.' });
+      return;
+    }
+
+    const targetLat = emergency?.latitude || 12.9716;
+    const targetLng = emergency?.longitude || 77.5946;
+
+    setIsSimulatingGps(true);
+    setDriverNotification({
+      type: 'success',
+      message: 'Live GPS coordinate simulation active. Streaming location updates along transit route every 2.5 seconds.'
+    });
+
+    let step = 0;
+    const startLat = 12.9650;
+    const startLng = 77.5850;
+
+    gpsIntervalRef.current = setInterval(async () => {
+      step += 1;
+      const fraction = Math.min(1.0, step * 0.1);
+      const curLat = Number((startLat + (targetLat - startLat) * fraction).toFixed(6));
+      const curLng = Number((startLng + (targetLng - startLng) * fraction).toFixed(6));
+
+      try {
+        await API.post('/ambulance/location', { latitude: curLat, longitude: curLng });
+        refresh();
+      } catch {
+        // ignore
+      }
+
+      if (fraction >= 1.0) {
+        clearInterval(gpsIntervalRef.current);
+        gpsIntervalRef.current = null;
+        setIsSimulatingGps(false);
+        setDriverNotification({
+          type: 'success',
+          message: 'Arrived at patient intercept point! GPS route simulation completed.'
+        });
+      }
+    }, 2500);
   };
 
   // ==========================================================================
@@ -397,9 +485,12 @@ const HealthcareDashboard = () => {
                           paddingTop: '6px',
                           borderTop: '1px dashed var(--color-gray-200)',
                           fontSize: '11px',
-                          color: 'var(--color-gray-500)'
+                          color: 'var(--color-gray-500)',
+                          flexWrap: 'wrap',
+                          gap: '4px'
                         }}>
                           <span>Risk: <strong>{eq.riskScore || 0}/100</strong></span>
+                          <span>Ambulance: <strong style={{ color: eq.ambulanceStatus && eq.ambulanceStatus !== 'STANDBY' ? 'var(--color-teal)' : 'inherit' }}>{eq.ambulanceStatus ? eq.ambulanceStatus.replace(/_/g, ' ') : (eq.requiresAmbulance ? 'Requested' : 'Not required')}</strong></span>
                           <span>Dept: <strong>{eq.requiredDepartment || 'Trauma'}</strong></span>
                         </div>
                       </div>
@@ -865,196 +956,404 @@ const HealthcareDashboard = () => {
   // ==========================================================================
   const renderDriverView = () => {
     const activeEmergency = currentJob?.emergency || activeEmergencies.find(e => (user?.ambulanceId && e.ambulanceId === user.ambulanceId)) || null;
+    const currentAmbulance = currentJob?.ambulance;
+    const unitIdentifier = user?.ambulanceUnitId || currentAmbulance?.unitId || 'AMB-101';
+    const currentStatus = currentAmbulance?.status || activeEmergency?.status || 'AVAILABLE';
+
+    // Sequence of progression stages
+    const progressionStages = [
+      { key: 'EN_ROUTE_TO_PATIENT', label: '🚑 En Route to Patient', next: 'ARRIVED_AT_PATIENT' },
+      { key: 'ARRIVED_AT_PATIENT', label: '📍 Arrived at Patient', next: 'PATIENT_PICKED_UP' },
+      { key: 'PATIENT_PICKED_UP', label: '👤 Patient Picked Up', next: 'EN_ROUTE_TO_HOSPITAL' },
+      { key: 'EN_ROUTE_TO_HOSPITAL', label: '🏥 En Route to Hospital', next: 'ARRIVED_AT_HOSPITAL' },
+      { key: 'ARRIVED_AT_HOSPITAL', label: '✅ Arrived at Hospital', next: 'COMPLETED' },
+      { key: 'COMPLETED', label: '🏁 Complete Dispatch', next: 'AVAILABLE' }
+    ];
 
     return (
-      <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-        {/* Section 12: Header */}
+      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        {/* Driver Console Header */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 'var(--space-4)',
-          marginBottom: 'var(--space-6)'
+          marginBottom: 'var(--space-5)'
         }}>
           <div>
-            <h2 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-gray-900)' }}>
-              Ambulance Driver Console
-            </h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-primary)' }}>
-                Unit: {user?.ambulanceUnitId || currentJob?.ambulance?.unitId || 'AMB-102'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '24px' }}>🚑</span>
+              <h2 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-gray-900)', margin: 0 }}>
+                Ambulance Dispatch Console
+              </h2>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-teal)' }}>
+                Unit: {unitIdentifier}
               </span>
               <span>•</span>
-              <span style={{ fontSize: '13px', color: 'var(--color-gray-500)' }}>
-                Driver: {user?.fullName || 'Active Operator'}
+              <span style={{ fontSize: '13px', color: 'var(--color-gray-600)' }}>
+                Driver: <strong>{user?.fullName || 'Active Operator'}</strong>
               </span>
             </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-gray-600)' }}>
-              UNIT STATUS:
-            </span>
+            <div style={{
+              background: wsConnected ? 'var(--color-success-bg, #ECFDF5)' : 'var(--color-warning-bg, #FFFBEB)',
+              border: `1px solid ${wsConnected ? 'var(--color-success-border, #A7F3D0)' : 'var(--color-warning-border, #FDE68A)'}`,
+              padding: '6px 12px',
+              borderRadius: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: wsConnected ? 'var(--color-success, #059669)' : 'var(--color-warning, #D97706)'
+            }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: wsConnected ? '#10B981' : '#F59E0B' }} />
+              <span>{wsConnected ? 'DISPATCH BROKER CONNECTED' : 'RECONNECTING TELEMETRY...'}</span>
+            </div>
+
             <button
               onClick={() => setIsDriverAvailable(!isDriverAvailable)}
               className={`btn btn-sm ${isDriverAvailable ? 'btn-success' : 'btn-secondary'}`}
-              style={{ fontWeight: 800 }}
+              style={{ fontWeight: 800, padding: '7px 14px' }}
             >
-              {isDriverAvailable ? 'AVAILABLE' : 'BUSY'}
+              {isDriverAvailable ? '✓ ON DUTY / AVAILABLE' : 'BUSY / OUT OF SERVICE'}
             </button>
           </div>
         </div>
 
-        {/* Section 12: New Request Card Alert */}
-        {pendingRequests.map(req => (
+        {/* Driver Notification Banner */}
+        {driverNotification && (
           <div
-            key={req.id}
-            className="incoming-alert-card"
-            style={{ marginBottom: 'var(--space-5)' }}
+            className={`alert alert-${driverNotification.type === 'success' ? 'success' : driverNotification.type === 'warning' ? 'warning' : 'critical'}`}
+            style={{
+              marginBottom: 'var(--space-5)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 18px',
+              borderRadius: 'var(--radius-lg)',
+              animation: 'fadeIn 0.2s ease-out'
+            }}
           >
-            <div className="incoming-alert-header">
-              <div className="incoming-alert-title">
-                <span>🚨</span>
-                <span>NEW AMBULANCE REQUEST</span>
-                <StatusBadge status="CRITICAL" size="sm" />
-              </div>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-critical)' }}>
-                RISK: {req.riskScore != null ? req.riskScore : 'N/A'}/100
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '18px' }}>
+                {driverNotification.type === 'success' ? '✓' : driverNotification.type === 'warning' ? '⚠️' : '🚨'}
               </span>
+              <span style={{ fontSize: '13px', fontWeight: 600 }}>{driverNotification.message}</span>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
-              <div>
-                <div className="stat-card-label">Patient</div>
-                <div style={{ fontSize: '14px', fontWeight: 800 }}>{req.patientName || 'Emergency Patient'}</div>
-              </div>
-              <div>
-                <div className="stat-card-label">Pickup Location</div>
-                <div style={{ fontSize: '13px', fontWeight: 600 }}>{req.pickupLat?.toFixed(4)}, {req.pickupLng?.toFixed(4)}</div>
-              </div>
-              <div>
-                <div className="stat-card-label">Destination Hospital</div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-primary)' }}>{req.destinationHospital || 'City General Hospital'}</div>
-              </div>
-              <div>
-                <div className="stat-card-label">Distance & ETA</div>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-secondary)' }}>
-                  {req.distanceKm || 3.2} km • ~{req.etaMinutes || 7} min
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end', borderTop: '1px solid rgba(220, 38, 38, 0.15)', paddingTop: 'var(--space-3)' }}>
-              <button
-                onClick={() => declineDriverRequest(req.id)}
-                className="btn btn-secondary btn-sm"
-              >
-                ✗ DECLINE
-              </button>
-              <button
-                onClick={() => acceptDriverRequest(req.id)}
-                className="btn btn-critical btn-sm"
-                style={{ fontWeight: 800 }}
-              >
-                ✓ ACCEPT REQUEST
-              </button>
-            </div>
+            <button
+              onClick={() => setDriverNotification(null)}
+              className="btn btn-ghost btn-sm"
+              style={{ color: 'var(--color-gray-500)', fontSize: '16px' }}
+            >
+              ✕
+            </button>
           </div>
-        ))}
+        )}
 
-        {/* Section 13: Driver Live Map & Active Job */}
+        {/* Section 12: Incoming Dispatch Requests */}
+        {pendingRequests.length > 0 && (
+          <div style={{ marginBottom: 'var(--space-6)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: 'var(--space-3)' }}>
+              <span style={{ fontSize: '18px' }}>⚡</span>
+              <h3 style={{ fontSize: 'var(--font-size-md)', fontWeight: 800, color: 'var(--color-critical)', margin: 0 }}>
+                INCOMING DISPATCH REQUESTS ({pendingRequests.length})
+              </h3>
+            </div>
+
+            {pendingRequests.map(req => {
+              const isLoading = actionLoadingId === req.id;
+              return (
+                <div
+                  key={req.id}
+                  className="incoming-alert-card"
+                  style={{
+                    marginBottom: 'var(--space-4)',
+                    background: '#FFFFFF',
+                    border: '2px solid var(--color-critical)',
+                    boxShadow: '0 4px 20px rgba(220, 38, 38, 0.12)'
+                  }}
+                >
+                  {/* Alert Header */}
+                  <div className="incoming-alert-header">
+                    <div className="incoming-alert-title">
+                      <span>🚨</span>
+                      <span>DISPATCH REQUEST: SOS-{req.emergencyId || req.id}</span>
+                      <StatusBadge status={req.severity || 'CRITICAL'} size="sm" />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{
+                        background: 'var(--color-critical)',
+                        color: '#FFFFFF',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        padding: '3px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        TRIAGE RISK {req.riskScore != null ? req.riskScore : 90}/100
+                      </span>
+                      <span style={{ fontSize: '11px', color: 'var(--color-gray-500)' }}>
+                        {req.requestedAt ? new Date(req.requestedAt).toLocaleTimeString() : 'Just now'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Dispatch Details Grid */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: 'var(--space-4)',
+                    marginBottom: 'var(--space-4)',
+                    padding: 'var(--space-3) 0'
+                  }}>
+                    {/* Patient Information */}
+                    <div>
+                      <div className="incoming-alert-item-label">Patient Profile</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-gray-900)' }}>
+                        {req.patientName || 'Emergency Patient'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-gray-600)', marginTop: '2px' }}>
+                        {req.patientAge ? `${req.patientAge} yrs • ` : ''}
+                        Blood: <strong>{req.patientBloodGroup || 'O+'}</strong>
+                      </div>
+                      {req.patientPhone && (
+                        <div style={{ fontSize: '12px', color: 'var(--color-primary)', marginTop: '2px' }}>
+                          📞 {req.patientPhone}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Patient Pickup Location */}
+                    <div>
+                      <div className="incoming-alert-item-label">Pickup Location</div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-gray-800)' }}>
+                        📍 {req.pickupLat?.toFixed(4)}, {req.pickupLng?.toFixed(4)}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-gray-600)', marginTop: '2px', lineHeight: 1.4 }}>
+                        {req.patientAddress || 'Current patient GPS telemetry coordinate'}
+                      </div>
+                    </div>
+
+                    {/* Assigned Destination Hospital */}
+                    <div>
+                      <div className="incoming-alert-item-label">Assigned Hospital</div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--color-teal)' }}>
+                        🏥 {req.destinationHospital || req.hospitalName || 'City General Hospital'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-gray-500)', marginTop: '2px' }}>
+                        Trauma & Emergency Care Unit
+                      </div>
+                    </div>
+
+                    {/* Response Metrics */}
+                    <div>
+                      <div className="incoming-alert-item-label">Response Metrics</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-primary)' }}>
+                        📏 {req.distanceKm || 2.4} km
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-teal)', marginTop: '2px' }}>
+                        ⏱️ ~{req.etaMinutes || 6} min response time
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Symptoms & Clinical Notes */}
+                  {req.symptoms && (
+                    <div style={{
+                      background: 'var(--color-gray-50)',
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      marginBottom: 'var(--space-4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>
+                        Reported Symptoms:
+                      </span>
+                      {(Array.isArray(req.symptoms) ? req.symptoms : [req.symptoms]).map((s, idx) => (
+                        <span key={idx} style={{
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          background: '#FEE2E2',
+                          color: '#991B1B',
+                          padding: '2px 8px',
+                          borderRadius: '12px'
+                        }}>
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Action Buttons: Clearly visible Accept & Decline actions */}
+                  <div style={{
+                    display: 'flex',
+                    gap: 'var(--space-3)',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    borderTop: '1px solid rgba(220, 38, 38, 0.15)',
+                    paddingTop: 'var(--space-4)',
+                    flexWrap: 'wrap'
+                  }}>
+                    {/* Decline Action */}
+                    <button
+                      type="button"
+                      onClick={() => declineDriverRequest(req.id)}
+                      disabled={isLoading}
+                      className="btn-dispatch-decline"
+                      aria-label="Decline Request"
+                    >
+                      <span aria-hidden="true">✕</span>
+                      <span>{isLoading ? 'Processing...' : 'DECLINE REQUEST'}</span>
+                    </button>
+
+                    {/* Accept Action */}
+                    <button
+                      type="button"
+                      onClick={() => acceptDriverRequest(req.id)}
+                      disabled={isLoading}
+                      className="btn-dispatch-accept"
+                      aria-label="Accept Dispatch"
+                    >
+                      {isLoading ? (
+                        <span className="status-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
+                      ) : (
+                        <span aria-hidden="true">✓</span>
+                      )}
+                      <span>{isLoading ? 'Accepting...' : 'ACCEPT DISPATCH'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Section 13: Active Emergency Response Console */}
         {activeEmergency ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            {/* Active Response Header Banner */}
             <div style={{
-              background: 'var(--color-success-bg)',
-              border: '1px solid var(--color-success-border)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '12px 16px',
+              background: '#FFFFFF',
+              border: '2px solid var(--color-teal, #0D9488)',
+              borderRadius: 'var(--radius-xl, 16px)',
+              padding: '16px 20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: '10px'
+              gap: '12px',
+              boxShadow: '0 4px 20px rgba(13, 148, 136, 0.12)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '20px' }}>🚑</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '28px' }}>🚑</span>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-success)' }}>
-                    ACTIVE RESPONSE: SOS-{activeEmergency.id}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontWeight: 900, fontSize: '16px', color: '#0B1F3A' }}>
+                      ACTIVE EMERGENCY DISPATCH: SOS-{activeEmergency.id}
+                    </span>
+                    <StatusBadge status={activeEmergency.severity || 'CRITICAL'} size="sm" />
+                    <StatusBadge status={activeEmergency.status} size="sm" />
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--color-gray-600)' }}>
-                    Patient: {activeEmergency.patientName || activeEmergency.patientUid} • Destination: {activeEmergency.hospitalName || 'City Hospital'}
+                  <div style={{ fontSize: '13px', color: 'var(--color-gray-600)', marginTop: '3px' }}>
+                    Patient: <strong>{activeEmergency.patientName || activeEmergency.patientUid}</strong> • Destination: <strong>{activeEmergency.hospitalName || 'City Emergency Dept'}</strong>
                   </div>
                 </div>
               </div>
 
-              <StatusBadge status={activeEmergency.status} size="sm" />
+              {/* GPS Simulation Toggle */}
+              <button
+                type="button"
+                onClick={() => toggleGpsSimulation(activeEmergency)}
+                className={`btn btn-sm ${isSimulatingGps ? 'btn-critical' : 'btn-secondary'}`}
+                style={{ fontWeight: 700, padding: '7px 14px' }}
+                title="Stream simulated movement coordinates along route"
+              >
+                📡 {isSimulatingGps ? 'Pause GPS Stream' : 'Stream Simulated GPS'}
+              </button>
             </div>
 
-            {/* Large Section 13 Google Map */}
+            {/* Interactive Live Tracking Map with Leaflet OpenStreetMap tiles */}
             <GoogleMapTracking
               patientLocation={[activeEmergency.latitude, activeEmergency.longitude]}
               hospitalLocation={activeEmergency.hospitalLat && activeEmergency.hospitalLng ? [activeEmergency.hospitalLat, activeEmergency.hospitalLng] : [12.9716, 77.5946]}
-              ambulanceLocation={ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : [12.9650, 77.5850]}
-              ambulanceStatus={activeEmergency.status}
-              ambulanceUnitId={user?.ambulanceUnitId || currentJob?.ambulance?.unitId || 'AMB-102'}
-              driverName={user?.fullName || 'Operator'}
+              ambulanceLocation={ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : (currentAmbulance?.latitude ? [currentAmbulance.latitude, currentAmbulance.longitude] : [12.9650, 77.5850])}
+              ambulanceStatus={currentStatus}
+              ambulanceUnitId={unitIdentifier}
+              driverName={user?.fullName || 'Active Operator'}
               emergencyId={activeEmergency.id}
               followAmbulance={true}
-              height="450px"
+              height="460px"
             />
 
-            {/* Quick Action Navigation Buttons for Driver */}
-            <div className="card" style={{ padding: 'var(--space-4)' }}>
-              <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase', marginBottom: '10px' }}>
-                Progression Actions
+            {/* Step-by-Step Status Progression Action Bar */}
+            <div className="card" style={{ padding: 'var(--space-5)' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '14px',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Dispatch Progression Controls
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--color-gray-700)', marginTop: '2px' }}>
+                    Current Unit Stage: <strong style={{ color: 'var(--color-teal)' }}>{currentStatus.replace(/_/g, ' ')}</strong>
+                  </div>
+                </div>
+
+                <span style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
+                  Click step to update status across hospital & patient monitors
+                </span>
               </div>
-              <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => updateAmbulanceStatus('EN_ROUTE_TO_PATIENT')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ flex: 1, minWidth: '130px' }}
-                >
-                  🚑 En Route to Patient
-                </button>
-                <button
-                  onClick={() => updateAmbulanceStatus('ARRIVED_AT_PATIENT')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ flex: 1, minWidth: '130px' }}
-                >
-                  📍 Arrived at Patient
-                </button>
-                <button
-                  onClick={() => updateAmbulanceStatus('PATIENT_PICKED_UP')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ flex: 1, minWidth: '130px' }}
-                >
-                  👤 Patient Picked Up
-                </button>
-                <button
-                  onClick={() => updateAmbulanceStatus('EN_ROUTE_TO_HOSPITAL')}
-                  className="btn btn-secondary btn-sm"
-                  style={{ flex: 1, minWidth: '130px' }}
-                >
-                  🏥 En Route to Hospital
-                </button>
-                <button
-                  onClick={() => updateAmbulanceStatus('ARRIVED_AT_HOSPITAL')}
-                  className="btn btn-success btn-sm"
-                  style={{ flex: 1, minWidth: '130px', fontWeight: 800 }}
-                >
-                  ✅ Arrived at Hospital
-                </button>
+
+              {/* Progression Buttons */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+                {progressionStages.map((stage) => {
+                  const isActive = currentStatus === stage.key;
+                  return (
+                    <button
+                      key={stage.key}
+                      type="button"
+                      onClick={() => updateAmbulanceStatus(stage.key)}
+                      disabled={isUpdatingStatus}
+                      className={`btn btn-sm ${isActive ? 'btn-teal' : 'btn-secondary'}`}
+                      style={{
+                        padding: '10px 8px',
+                        fontSize: '12px',
+                        fontWeight: isActive ? 800 : 600,
+                        border: isActive ? '2px solid var(--color-teal, #0D9488)' : '1px solid var(--color-gray-200)',
+                        background: isActive ? 'var(--color-teal-bg, #F0FDFA)' : 'white',
+                        color: isActive ? 'var(--color-teal, #0D9488)' : 'var(--color-gray-700)',
+                        boxShadow: isActive ? '0 0 10px rgba(13, 148, 136, 0.25)' : 'none',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {stage.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
         ) : (
-          <EmptyState
-            icon="🚑"
-            title="No Active Emergency Dispatches"
-            message="Your ambulance unit is in service and waiting for emergency requests."
-          />
+          pendingRequests.length === 0 && (
+            <EmptyState
+              icon="🚑"
+              title="No Active Emergency Dispatches"
+              message="Your ambulance unit is in active service and listening for emergency dispatch broadcasts on the network."
+            />
+          )
         )}
       </div>
     );

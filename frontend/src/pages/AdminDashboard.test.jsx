@@ -252,8 +252,10 @@ describe('AdminDashboard Component', () => {
     expect(screen.getAllByText(/155\/98/).length).toBeGreaterThan(0); // Blood pressure
 
     // Check map tracking component
-    expect(screen.getByTestId('mock-google-map-tracking')).toBeDefined();
-    expect(screen.getByText(/Emergency: 99/i)).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-google-map-tracking')).toBeDefined();
+      expect(screen.getByText(/Emergency: 99/i)).toBeDefined();
+    });
   });
 
   it('provides administrative action controls to resolve emergency, cancel emergency, and dispatch', async () => {

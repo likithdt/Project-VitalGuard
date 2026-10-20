@@ -52,10 +52,11 @@
   --color-info-border: #BFDBFE;
 
   /* Neutral Slate / Blue-Gray */
+  /* Neutral Slate / Blue-Gray */
   --color-white: #FFFFFF;
-  --color-bg-main: #F5F8FC;
-  --color-bg-card: #FFFFFF;
-  --color-gray-50: #F5F8FC;
+  --color-bg-main: #EEF4FA;
+  --color-bg-card: rgba(255, 255, 255, 0.68);
+  --color-gray-50: #EEF4FA;
   --color-gray-100: #EDF2F7;
   --color-gray-200: #E2E8F0;
   --color-gray-300: #CBD5E1;
@@ -69,6 +70,28 @@
   --color-text-primary: #172B4D;
   --color-text-secondary: #64748B;
   --color-text-muted: #94A3B8;
+
+  /* Liquid Glass Design System Tokens */
+  --glass-surface: rgba(255, 255, 255, 0.68);
+  --glass-surface-hover: rgba(255, 255, 255, 0.80);
+  --glass-surface-elevated: rgba(255, 255, 255, 0.85);
+  --glass-surface-subtle: rgba(255, 255, 255, 0.45);
+  --glass-surface-blue: rgba(239, 246, 255, 0.65);
+  --glass-surface-teal: rgba(240, 253, 250, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.78);
+  --glass-border-subtle: rgba(255, 255, 255, 0.50);
+  --glass-border-highlight: rgba(255, 255, 255, 0.95);
+  --glass-border-blue: rgba(191, 219, 254, 0.65);
+  --glass-blur: blur(20px) saturate(145%);
+  --glass-blur-nav: blur(24px) saturate(150%);
+  --glass-blur-modal: blur(28px) saturate(160%);
+  --glass-radius: 20px;
+  --glass-radius-md: 14px;
+  --glass-radius-sm: 10px;
+  --glass-shadow: 0 8px 32px rgba(31, 65, 114, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --glass-shadow-hover: 0 14px 40px rgba(31, 65, 114, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --glass-shadow-modal: 0 24px 60px rgba(11, 31, 58, 0.22), inset 0 1px 0 rgba(255, 255, 255, 1);
+  --glass-shadow-active: 0 0 24px rgba(37, 99, 235, 0.18);
 
   /* Typography */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -107,18 +130,18 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
-  --radius-xl: 18px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
 
   /* Shadows - Layered premium healthcare elevation */
   --shadow-xs: 0 1px 2px 0 rgba(11, 31, 58, 0.04);
-  --shadow-sm: 0 1px 3px 0 rgba(11, 31, 58, 0.06), 0 1px 2px -1px rgba(11, 31, 58, 0.04);
-  --shadow-md: 0 4px 8px -1px rgba(11, 31, 58, 0.08), 0 2px 4px -2px rgba(11, 31, 58, 0.04);
-  --shadow-lg: 0 12px 20px -3px rgba(11, 31, 58, 0.09), 0 4px 6px -4px rgba(11, 31, 58, 0.03);
-  --shadow-xl: 0 20px 28px -5px rgba(11, 31, 58, 0.12), 0 8px 12px -6px rgba(11, 31, 58, 0.04);
-  --shadow-glow-blue: 0 0 18px rgba(37, 99, 235, 0.25);
-  --shadow-glow-teal: 0 0 18px rgba(13, 148, 136, 0.25);
-  --shadow-glow-critical: 0 0 20px rgba(220, 38, 38, 0.25);
+  --shadow-sm: 0 2px 6px 0 rgba(11, 31, 58, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --shadow-md: 0 8px 24px -2px rgba(11, 31, 58, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-lg: 0 14px 34px -3px rgba(11, 31, 58, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-xl: 0 24px 48px -5px rgba(11, 31, 58, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --shadow-glow-blue: 0 0 20px rgba(37, 99, 235, 0.25);
+  --shadow-glow-teal: 0 0 20px rgba(13, 148, 136, 0.25);
+  --shadow-glow-critical: 0 0 24px rgba(220, 38, 38, 0.28);
 
   /* Layout dimensions */
   --sidebar-width: 265px;
@@ -153,8 +176,15 @@ body {
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
-  color: var(--color-gray-800);
-  background-color: var(--color-gray-50);
+  color: var(--color-text-primary);
+  background-color: #EEF4FA;
+  background-image:
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(13, 148, 136, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 30%, rgba(37, 99, 235, 0.05) 0px, transparent 55%),
+    radial-gradient(at 100% 100%, rgba(13, 148, 136, 0.07) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(37, 99, 235, 0.06) 0px, transparent 50%);
+  background-attachment: fixed;
   min-height: 100vh;
 }
 
@@ -183,11 +213,11 @@ button, input, select, textarea {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-gray-300);
+  background: rgba(148, 163, 184, 0.45);
   border-radius: var(--radius-full);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gray-400);
+  background: rgba(100, 116, 139, 0.65);
 }
 
 /* ==========================================================================
@@ -200,7 +230,7 @@ button, input, select, textarea {
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  background-color: var(--color-gray-50);
+  background: transparent;
   box-sizing: border-box;
 }
 
@@ -214,15 +244,17 @@ button, input, select, textarea {
   position: relative;
 }
 
-/* Sidebar */
+/* Liquid Glass Floating Sidebar */
 .dashboard-sidebar {
   position: fixed;
   top: 0;
   left: 0;
   bottom: 0;
   width: var(--sidebar-width);
-  background: var(--color-white);
-  border-right: 1px solid rgba(226, 232, 240, 0.85);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: var(--glass-blur-nav);
+  -webkit-backdrop-filter: var(--glass-blur-nav);
+  border-right: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
   z-index: 40;
@@ -230,7 +262,7 @@ button, input, select, textarea {
   flex-shrink: 0;
   box-sizing: border-box;
   overflow-y: auto;
-  box-shadow: 1px 0 3px rgba(11, 31, 58, 0.02);
+  box-shadow: 4px 0 24px rgba(31, 65, 114, 0.05), inset -1px 0 0 rgba(255, 255, 255, 0.85);
 }
 
 .dashboard-sidebar.collapsed {
@@ -243,8 +275,10 @@ button, input, select, textarea {
   gap: var(--space-3);
   padding: 0 var(--space-5);
   height: var(--topbar-height);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
-  background: linear-gradient(180deg, #FFFFFF 0%, #FAFCFF 100%);
+  border-bottom: 1px solid var(--glass-border-subtle);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   flex-shrink: 0;
 }
 
@@ -259,8 +293,8 @@ button, input, select, textarea {
   justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
-  box-shadow: 0 4px 10px rgba(11, 31, 58, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(11, 31, 58, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .sidebar-brand-name {
@@ -285,7 +319,7 @@ button, input, select, textarea {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .sidebar-nav-section-title {
@@ -309,18 +343,22 @@ button, input, select, textarea {
   font-weight: 500;
   transition: all var(--transition-fast);
   position: relative;
+  border: 1px solid transparent;
 }
 
 .sidebar-nav-link:hover {
-  background-color: var(--color-primary-bg);
+  background: rgba(37, 99, 235, 0.07);
   color: var(--color-primary);
+  border-color: rgba(37, 99, 235, 0.12);
   transform: translateX(2px);
 }
 
 .sidebar-nav-link.active {
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.10) 0%, rgba(13, 148, 136, 0.06) 100%);
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.14) 0%, rgba(13, 148, 136, 0.08) 100%);
   color: var(--color-secondary);
   font-weight: 700;
+  border: 1px solid rgba(37, 99, 235, 0.22);
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.08);
 }
 
 .sidebar-nav-link.active::before {
@@ -332,7 +370,7 @@ button, input, select, textarea {
   width: 3.5px;
   background: linear-gradient(180deg, var(--color-secondary) 0%, var(--color-teal) 100%);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  box-shadow: 0 0 8px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.45);
 }
 
 .sidebar-nav-icon {
@@ -347,8 +385,8 @@ button, input, select, textarea {
 
 .sidebar-user {
   padding: var(--space-3) var(--space-4);
-  border-top: 1px solid rgba(226, 232, 240, 0.85);
-  background: linear-gradient(180deg, #FAFCFF 0%, #FFFFFF 100%);
+  border-top: 1px solid var(--glass-border-subtle);
+  background: rgba(255, 255, 255, 0.45);
   flex-shrink: 0;
 }
 
@@ -357,9 +395,9 @@ button, input, select, textarea {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(11, 31, 58, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(11, 31, 58, 0.48);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 45;
 }
 
@@ -377,15 +415,15 @@ button, input, select, textarea {
   position: relative;
 }
 
-/* Topbar */
+/* Liquid Glass Floating Topbar */
 .dashboard-topbar {
   height: var(--topbar-height);
   min-height: var(--topbar-height);
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
-  box-shadow: 0 1px 3px rgba(11, 31, 58, 0.03);
+  background: rgba(255, 255, 255, 0.70);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: 0 4px 20px rgba(31, 65, 114, 0.04), inset 0 -1px 0 rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -475,74 +513,76 @@ button, input, select, textarea {
   box-sizing: border-box;
 }
 
-/* Dedicated Admin Tab Navigation - Clean horizontal scrolling */
+/* Dedicated Admin Tab Navigation - Liquid Glass horizontal pill bar */
 .admin-tabs-container {
   width: 100%;
   max-width: 100%;
   min-width: 0;
   margin-bottom: var(--space-6);
-  border-bottom: 2px solid var(--color-gray-200);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(31, 65, 114, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   box-sizing: border-box;
 }
 
 .admin-tabs {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding-bottom: 6px;
   white-space: nowrap;
   box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-gray-300) transparent;
+  scrollbar-width: none;
 }
 
 .admin-tabs::-webkit-scrollbar {
-  height: 4px;
-}
-
-.admin-tabs::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.admin-tabs::-webkit-scrollbar-thumb {
-  background: var(--color-gray-300);
-  border-radius: 4px;
+  display: none;
 }
 
 .admin-tab-btn {
   flex-shrink: 0;
   white-space: nowrap;
+  border-radius: 10px;
+  transition: all var(--transition-fast);
 }
 
 /* ==========================================================================
-   CARDS & CONTAINERS
+   CARDS & CONTAINERS - LIQUID GLASS
    ========================================================================== */
 
-.card {
-  background: var(--color-white);
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+.card, .glass-card {
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
   transition: box-shadow var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
+  position: relative;
 }
 
-.card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: rgba(203, 213, 225, 0.95);
+.card:hover, .glass-card:hover {
+  box-shadow: var(--glass-shadow-hover);
+  border-color: var(--glass-border-highlight);
 }
 
 .card-header {
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.75);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(180deg, #FFFFFF 0%, #FAFCFF 100%);
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--glass-radius) var(--glass-radius) 0 0;
 }
 
 .card-title {
@@ -567,21 +607,23 @@ button, input, select, textarea {
 
 .card-footer {
   padding: var(--space-3) var(--space-5);
-  border-top: 1px solid var(--color-gray-200);
-  background-color: var(--color-gray-50);
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  border-top: 1px solid rgba(226, 232, 240, 0.75);
+  background-color: rgba(240, 246, 254, 0.45);
+  border-radius: 0 0 var(--glass-radius) var(--glass-radius);
 }
 
 /* ==========================================================================
-   STAT CARDS
+   STAT CARDS - LIQUID GLASS
    ========================================================================== */
 
 .stat-card {
-  background: var(--color-white);
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: var(--radius-lg);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
   padding: var(--space-4) var(--space-5);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--glass-shadow);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -592,8 +634,8 @@ button, input, select, textarea {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: rgba(37, 99, 235, 0.25);
+  box-shadow: var(--glass-shadow-hover);
+  border-color: var(--glass-border-highlight);
 }
 
 .stat-card-label {
@@ -625,65 +667,71 @@ button, input, select, textarea {
 .stat-card-icon {
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 12px rgba(31, 65, 114, 0.06);
   transition: transform var(--transition-fast);
 }
 
 .stat-card:hover .stat-card-icon {
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
 
-.stat-card-icon.primary { background: var(--color-primary-bg); color: var(--color-primary); border: 1px solid var(--color-primary-border); }
-.stat-card-icon.critical { background: var(--color-critical-bg); color: var(--color-critical); border: 1px solid var(--color-critical-border); }
-.stat-card-icon.warning { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid var(--color-warning-border); }
-.stat-card-icon.success { background: var(--color-success-bg); color: var(--color-success); border: 1px solid var(--color-success-border); }
-.stat-card-icon.info { background: var(--color-secondary-bg); color: var(--color-secondary); border: 1px solid var(--color-secondary-border); }
-.stat-card-icon.teal { background: var(--color-teal-bg); color: var(--color-teal); border: 1px solid var(--color-teal-border); }
+.stat-card-icon.primary { background: rgba(11, 31, 58, 0.08); color: var(--color-primary); border-color: rgba(11, 31, 58, 0.15); }
+.stat-card-icon.critical { background: rgba(220, 38, 38, 0.12); color: var(--color-critical); border-color: rgba(220, 38, 38, 0.25); }
+.stat-card-icon.warning { background: rgba(245, 158, 11, 0.12); color: var(--color-warning); border-color: rgba(245, 158, 11, 0.25); }
+.stat-card-icon.success { background: rgba(22, 163, 74, 0.12); color: var(--color-success); border-color: rgba(22, 163, 74, 0.25); }
+.stat-card-icon.info { background: rgba(37, 99, 235, 0.12); color: var(--color-secondary); border-color: rgba(37, 99, 235, 0.25); }
+.stat-card-icon.teal { background: rgba(13, 148, 136, 0.12); color: var(--color-teal); border-color: rgba(13, 148, 136, 0.25); }
 
 /* ==========================================================================
-   VITAL CARDS
+   VITAL CARDS - LIQUID GLASS
    ========================================================================== */
 
 .vital-card {
-  background: var(--color-white);
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: var(--radius-lg);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
   padding: var(--space-4) var(--space-5);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--glass-shadow);
   transition: all var(--transition-fast);
   position: relative;
   overflow: hidden;
 }
 
 .vital-card:hover {
-  border-color: rgba(37, 99, 235, 0.3);
-  box-shadow: var(--shadow-md);
+  border-color: var(--glass-border-highlight);
+  box-shadow: var(--glass-shadow-hover);
   transform: translateY(-2px);
 }
 
 .vital-card.critical {
-  border-color: var(--color-critical-border);
+  border-color: rgba(220, 38, 38, 0.45);
   border-left: 4px solid var(--color-critical);
-  background: linear-gradient(180deg, #FFFFFF 0%, #FEF2F2 100%);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(254, 242, 242, 0.75) 100%);
+  box-shadow: 0 8px 32px rgba(220, 38, 38, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .vital-card.warning {
-  border-color: var(--color-warning-border);
+  border-color: rgba(245, 158, 11, 0.45);
   border-left: 4px solid var(--color-warning);
-  background: linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 251, 235, 0.75) 100%);
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .vital-card.success {
-  border-color: var(--color-success-border);
+  border-color: rgba(22, 163, 74, 0.35);
   border-left: 4px solid var(--color-success);
-  background: linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 253, 244, 0.75) 100%);
 }
 
 .vital-header {
@@ -735,90 +783,93 @@ button, input, select, textarea {
   justify-content: space-between;
   font-size: 0.6875rem;
   color: var(--color-text-secondary);
-  border-top: 1px solid var(--color-gray-100);
+  border-top: 1px solid rgba(226, 232, 240, 0.75);
   padding-top: var(--space-2);
 }
 
 /* ==========================================================================
-   STATUS BADGES - SECTION 16
+   STATUS BADGES - LIQUID GLASS
    ========================================================================== */
 
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 9px;
-  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
   font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(31, 65, 114, 0.04);
 }
 
 .badge-sm {
-  padding: 2px 6px;
+  padding: 2px 7px;
   font-size: 0.625rem;
 }
 
 .badge-lg {
-  padding: 6px 12px;
+  padding: 6px 14px;
   font-size: var(--font-size-xs);
 }
 
-/* Exact section 16 color requirements with enhanced accessibility */
+/* Exact section 16 color requirements with enhanced accessibility and glass finish */
 .badge-critical {
-  background-color: #FEF2F2;
+  background-color: rgba(254, 242, 242, 0.90);
   color: #B91C1C;
-  border: 1px solid #FECACA;
+  border: 1px solid rgba(254, 202, 202, 0.85);
 }
 
 .badge-high {
-  background-color: #FFFBEB;
+  background-color: rgba(255, 251, 235, 0.90);
   color: #B45309;
-  border: 1px solid #FDE68A;
+  border: 1px solid rgba(253, 230, 138, 0.85);
 }
 
 .badge-moderate {
-  background-color: #FEFCE8;
+  background-color: rgba(254, 252, 232, 0.90);
   color: #A16207;
-  border: 1px solid #FEF08A;
+  border: 1px solid rgba(254, 240, 138, 0.85);
 }
 
 .badge-low {
-  background-color: #F0FDF4;
+  background-color: rgba(240, 253, 244, 0.90);
   color: #15803D;
-  border: 1px solid #BBF7D0;
+  border: 1px solid rgba(187, 247, 208, 0.85);
 }
 
 .badge-available {
-  background-color: #F0FDF4;
+  background-color: rgba(240, 253, 244, 0.90);
   color: #15803D;
-  border: 1px solid #BBF7D0;
+  border: 1px solid rgba(187, 247, 208, 0.85);
 }
 
 .badge-requested {
-  background-color: #EFF6FF;
+  background-color: rgba(239, 246, 255, 0.90);
   color: #1D4ED8;
-  border: 1px solid #BFDBFE;
+  border: 1px solid rgba(191, 219, 254, 0.85);
 }
 
 .badge-accepted {
-  background-color: #EFF6FF;
+  background-color: rgba(239, 246, 255, 0.90);
   color: #1D4ED8;
-  border: 1px solid #BFDBFE;
+  border: 1px solid rgba(191, 219, 254, 0.85);
 }
 
 .badge-enroute {
-  background-color: #EFF6FF;
+  background-color: rgba(239, 246, 255, 0.90);
   color: #1D4ED8;
-  border: 1px solid #BFDBFE;
+  border: 1px solid rgba(191, 219, 254, 0.85);
 }
 
 .badge-arrived {
-  background-color: #F0FDF4;
+  background-color: rgba(240, 253, 244, 0.90);
   color: #15803D;
-  border: 1px solid #BBF7D0;
+  border: 1px solid rgba(187, 247, 208, 0.85);
 }
 
 .badge-resolved {
@@ -834,7 +885,7 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   BUTTONS
+   BUTTONS - LIQUID GLASS & SOLID CONTRAST
    ========================================================================== */
 
 .btn {
@@ -876,84 +927,101 @@ button, input, select, textarea {
 }
 
 .btn-primary {
-  background-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary) 0%, #162E52 100%);
   color: var(--color-white);
-  border-color: var(--color-primary);
-  box-shadow: 0 1px 3px rgba(11, 31, 58, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 14px rgba(11, 31, 58, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-light);
-  border-color: var(--color-primary-light);
-  box-shadow: 0 4px 10px rgba(11, 31, 58, 0.22);
+  background: linear-gradient(135deg, #162E52 0%, #204172 100%);
+  box-shadow: 0 6px 18px rgba(11, 31, 58, 0.28);
   transform: translateY(-1px);
 }
 
 .btn-blue {
-  background-color: var(--color-secondary);
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
   color: var(--color-white);
-  border-color: var(--color-secondary);
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .btn-blue:hover:not(:disabled) {
-  background-color: #1D4ED8;
-  border-color: #1D4ED8;
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.38);
   transform: translateY(-1px);
 }
 
 .btn-teal {
-  background-color: var(--color-teal);
+  background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
   color: var(--color-white);
-  border-color: var(--color-teal);
-  box-shadow: 0 2px 4px rgba(13, 148, 136, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .btn-teal:hover:not(:disabled) {
-  background-color: #0F766E;
-  border-color: #0F766E;
-  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.3);
+  background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.38);
   transform: translateY(-1px);
 }
 
 .btn-secondary {
-  background-color: var(--color-white);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: var(--color-text-primary);
-  border-color: var(--color-gray-300);
-  box-shadow: var(--shadow-xs);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 8px rgba(31, 65, 114, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-gray-100);
-  border-color: var(--color-gray-400);
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 1);
   color: var(--color-primary);
+  box-shadow: 0 4px 16px rgba(31, 65, 114, 0.10);
+  transform: translateY(-1px);
+}
+
+.btn-glass {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 14px rgba(31, 65, 114, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.btn-glass:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow: 0 6px 20px rgba(31, 65, 114, 0.12);
   transform: translateY(-1px);
 }
 
 .btn-success {
-  background-color: var(--color-success);
+  background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
   color: var(--color-white);
-  border-color: var(--color-success);
-  box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .btn-success:hover:not(:disabled) {
-  background-color: var(--color-success-light);
+  background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(22, 163, 74, 0.35);
 }
 
 .btn-critical {
-  background-color: var(--color-critical);
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
   color: var(--color-white);
-  border-color: var(--color-critical);
-  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .btn-critical:hover:not(:disabled) {
-  background-color: #B91C1C;
-  border-color: #B91C1C;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.42);
   transform: translateY(-1px);
 }
 
-/* Cancel Emergency Button */
+/* Cancel Emergency Button - Prominent high contrast white/red styling */
 .btn-cancel-emergency {
-  background-color: #FFFFFF !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #DC2626 !important;
   border: 1.5px solid #DC2626 !important;
   border-radius: var(--radius-md, 8px);
@@ -967,19 +1035,19 @@ button, input, select, textarea {
   cursor: pointer;
   transition: all var(--transition-fast, 0.15s ease);
   white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.05);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.12);
 }
 
 .btn-cancel-emergency:hover:not(:disabled) {
-  background-color: #FEF2F2 !important;
+  background: #FEF2F2 !important;
   color: #B91C1C !important;
   border-color: #B91C1C !important;
-  box-shadow: 0 3px 8px rgba(220, 38, 38, 0.15);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.22);
   transform: translateY(-1px);
 }
 
 .btn-cancel-emergency:active:not(:disabled) {
-  background-color: #FEE2E2 !important;
+  background: #FEE2E2 !important;
   transform: translateY(0);
 }
 
@@ -996,12 +1064,12 @@ button, input, select, textarea {
   }
 }
 
-/* Dispatch Accept & Decline SaaS Buttons */
+/* Dispatch Accept & Decline Buttons */
 .btn-dispatch-accept {
   background: linear-gradient(135deg, #0D9488 0%, #059669 100%);
   color: #FFFFFF;
-  border: 1.5px solid transparent;
-  border-radius: var(--radius-md, 8px);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-md, 10px);
   padding: 10px 22px;
   font-weight: 800;
   font-size: 13.5px;
@@ -1011,13 +1079,13 @@ button, input, select, textarea {
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transition: all 0.2s ease;
 }
 
 .btn-dispatch-accept:hover:not(:disabled) {
   background: linear-gradient(135deg, #14B8A6 0%, #0D9488 100%);
-  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.5);
+  box-shadow: 0 6px 22px rgba(13, 148, 136, 0.5);
   transform: translateY(-1px);
 }
 
@@ -1031,10 +1099,12 @@ button, input, select, textarea {
 }
 
 .btn-dispatch-decline {
-  background-color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #DC2626;
   border: 1.5px solid #DC2626;
-  border-radius: var(--radius-md, 8px);
+  border-radius: var(--radius-md, 10px);
   padding: 10px 22px;
   font-weight: 800;
   font-size: 13.5px;
@@ -1045,6 +1115,7 @@ button, input, select, textarea {
   gap: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.10);
 }
 
 .btn-dispatch-decline:hover:not(:disabled) {
@@ -1052,7 +1123,7 @@ button, input, select, textarea {
   color: #B91C1C;
   border-color: #B91C1C;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.18);
 }
 
 .btn-dispatch-decline:active:not(:disabled) {
@@ -1073,12 +1144,12 @@ button, input, select, textarea {
 }
 
 .btn-ghost {
-  background-color: transparent;
+  background: transparent;
   color: var(--color-text-secondary);
   border-color: transparent;
 }
 .btn-ghost:hover:not(:disabled) {
-  background-color: var(--color-primary-bg);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--color-primary);
 }
 
@@ -1089,7 +1160,7 @@ button, input, select, textarea {
   border-radius: var(--radius-md);
 }
 
-/* Big Emergency Button - Section 3 */
+/* Big Emergency SOS Hero Button - Solid prominent red */
 .btn-emergency-hero {
   display: flex;
   flex-direction: column;
@@ -1099,11 +1170,11 @@ button, input, select, textarea {
   padding: var(--space-6) var(--space-8);
   background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
   color: var(--color-white);
-  border: none;
-  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--glass-radius);
   font-weight: var(--font-weight-extrabold);
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(220, 38, 38, 0.35);
+  box-shadow: 0 8px 32px rgba(220, 38, 38, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.4);
   transition: all var(--transition-fast);
   position: relative;
   overflow: hidden;
@@ -1111,7 +1182,7 @@ button, input, select, textarea {
 
 .btn-emergency-hero:hover:not(:disabled) {
   background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-  box-shadow: 0 6px 26px rgba(220, 38, 38, 0.45);
+  box-shadow: 0 12px 42px rgba(220, 38, 38, 0.52);
   transform: translateY(-2px);
 }
 
@@ -1130,31 +1201,33 @@ button, input, select, textarea {
 .btn-emergency-hero-subtitle {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  opacity: 0.92;
+  opacity: 0.95;
   margin-top: 4px;
 }
 
 /* ==========================================================================
-   INCOMING EMERGENCY ALERT - SECTION 7
+   INCOMING EMERGENCY ALERT - LIQUID GLASS
    ========================================================================== */
 
 .incoming-alert-card {
-  background: #FFF5F5;
+  background: rgba(254, 242, 242, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 2px solid var(--color-critical);
-  border-radius: var(--radius-xl);
+  border-radius: var(--glass-radius);
   padding: var(--space-5);
   margin-bottom: var(--space-6);
-  box-shadow: 0 4px 18px rgba(220, 38, 38, 0.14);
+  box-shadow: 0 8px 32px rgba(220, 38, 38, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   animation: subtle-pulse 3s infinite ease-in-out;
 }
 
 @keyframes subtle-pulse {
   0%, 100% {
-    box-shadow: 0 4px 18px rgba(220, 38, 38, 0.14);
+    box-shadow: 0 8px 32px rgba(220, 38, 38, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.95);
     border-color: var(--color-critical);
   }
   50% {
-    box-shadow: 0 4px 24px rgba(220, 38, 38, 0.28);
+    box-shadow: 0 10px 40px rgba(220, 38, 38, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.95);
     border-color: #B91C1C;
   }
 }
@@ -1165,7 +1238,7 @@ button, input, select, textarea {
   justify-content: space-between;
   margin-bottom: var(--space-4);
   padding-bottom: var(--space-3);
-  border-bottom: 1px solid rgba(220, 38, 38, 0.15);
+  border-bottom: 1px solid rgba(220, 38, 38, 0.2);
 }
 
 .incoming-alert-title {
@@ -1200,17 +1273,19 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   EMERGENCY STATUS CARD - SECTION 4
+   EMERGENCY STATUS CARD - LIQUID GLASS
    ========================================================================== */
 
 .active-emergency-status-card {
-  background: var(--color-white);
-  border: 1px solid var(--color-critical-border);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-left: 5px solid var(--color-critical);
-  border-radius: var(--radius-xl);
+  border-radius: var(--glass-radius);
   padding: var(--space-5);
   margin-bottom: var(--space-6);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--glass-shadow);
 }
 
 .emergency-status-row {
@@ -1242,7 +1317,7 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   EMERGENCY TIMELINE - SECTION 15
+   EMERGENCY TIMELINE - LIQUID GLASS
    ========================================================================== */
 
 .timeline-container {
@@ -1272,8 +1347,8 @@ button, input, select, textarea {
 }
 
 .timeline-node {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1282,18 +1357,20 @@ button, input, select, textarea {
   font-weight: var(--font-weight-bold);
   z-index: 2;
   transition: all var(--transition-normal);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .timeline-node.completed {
-  background-color: var(--color-success);
+  background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
   color: var(--color-white);
-  box-shadow: 0 0 0 4px var(--color-success-bg);
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.2);
 }
 
 .timeline-node.active {
-  background-color: var(--color-secondary);
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
   color: var(--color-white);
-  box-shadow: 0 0 0 4px var(--color-secondary-bg);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25);
   animation: node-pulse 2s infinite ease-in-out;
 }
 
@@ -1303,15 +1380,15 @@ button, input, select, textarea {
 }
 
 .timeline-node.pending {
-  background-color: var(--color-white);
+  background: rgba(255, 255, 255, 0.7);
   color: var(--color-gray-400);
-  border: 2px solid var(--color-gray-300);
+  border: 2px solid rgba(203, 213, 225, 0.85);
 }
 
 .timeline-line {
   width: 2px;
   flex: 1;
-  background-color: var(--color-gray-200);
+  background-color: rgba(226, 232, 240, 0.85);
   margin-top: 4px;
   margin-bottom: 4px;
 }
@@ -1350,16 +1427,18 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   TABLES - SECTION 18
+   TABLES - LIQUID GLASS
    ========================================================================== */
 
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: var(--radius-lg);
-  background: var(--color-white);
-  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
 }
 
 .data-table {
@@ -1370,21 +1449,23 @@ button, input, select, textarea {
 }
 
 .data-table th {
-  background-color: #F8FAFD;
+  background-color: rgba(240, 246, 254, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 13px 18px;
   font-weight: 700;
   font-size: 0.6875rem;
   color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  border-bottom: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.75);
   white-space: nowrap;
 }
 
 .data-table td {
   padding: 14px 18px;
   color: var(--color-text-primary);
-  border-bottom: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.65);
   vertical-align: middle;
 }
 
@@ -1393,7 +1474,7 @@ button, input, select, textarea {
 }
 
 .data-table tbody tr:hover {
-  background-color: #F8FAFD;
+  background-color: rgba(37, 99, 235, 0.04);
 }
 
 .data-table tbody tr:last-child td {
@@ -1401,7 +1482,7 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   FORMS & INPUTS
+   FORMS & INPUTS - LIQUID GLASS
    ========================================================================== */
 
 .form-group {
@@ -1424,16 +1505,20 @@ button, input, select, textarea {
   padding: 10px 14px;
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
-  background-color: var(--color-white);
-  border: 1px solid var(--color-gray-300);
+  background-color: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(203, 213, 225, 0.85);
   border-radius: var(--radius-md);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+  box-shadow: inset 0 1px 2px rgba(11, 31, 58, 0.03);
 }
 
 .form-input:focus, .form-select:focus, .form-textarea:focus {
   outline: none;
+  background-color: rgba(255, 255, 255, 0.95);
   border-color: var(--color-secondary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
 }
 
 .form-input::placeholder, .form-textarea::placeholder {
@@ -1441,15 +1526,15 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   MODALS
+   MODALS - LIQUID GLASS
    ========================================================================== */
 
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(11, 31, 58, 0.60);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background-color: rgba(11, 31, 58, 0.48);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1458,10 +1543,12 @@ button, input, select, textarea {
 }
 
 .modal-card {
-  background: var(--color-white);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: var(--glass-blur-modal);
+  -webkit-backdrop-filter: var(--glass-blur-modal);
+  border-radius: 24px;
+  box-shadow: var(--glass-shadow-modal);
+  border: 1px solid rgba(255, 255, 255, 0.95);
   width: 100%;
   max-width: 540px;
   max-height: 90vh;
@@ -1476,10 +1563,11 @@ button, input, select, textarea {
 
 .modal-header {
   padding: var(--space-5);
-  border-bottom: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.75);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-radius: 24px 24px 0 0;
 }
 
 .modal-title {
@@ -1495,16 +1583,16 @@ button, input, select, textarea {
 
 .modal-footer {
   padding: var(--space-4) var(--space-5);
-  border-top: 1px solid var(--color-gray-200);
-  background-color: var(--color-gray-50);
+  border-top: 1px solid rgba(226, 232, 240, 0.75);
+  background-color: rgba(240, 246, 254, 0.45);
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+  border-radius: 0 0 24px 24px;
 }
 
 /* ==========================================================================
-   DROPDOWNS
+   DROPDOWNS - LIQUID GLASS
    ========================================================================== */
 
 .dropdown {
@@ -1514,10 +1602,12 @@ button, input, select, textarea {
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 8px);
-  background: var(--color-white);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(11, 31, 58, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   z-index: 60;
   min-width: 230px;
   overflow: hidden;
@@ -1545,7 +1635,7 @@ button, input, select, textarea {
 }
 
 .dropdown-item:hover {
-  background-color: var(--color-gray-50);
+  background-color: rgba(37, 99, 235, 0.08);
   color: var(--color-gray-900);
 }
 
@@ -1554,26 +1644,26 @@ button, input, select, textarea {
 }
 
 .dropdown-item.critical:hover {
-  background-color: var(--color-critical-bg);
+  background-color: rgba(220, 38, 38, 0.10);
 }
 
 .dropdown-divider {
   height: 1px;
-  background-color: var(--color-gray-200);
+  background-color: rgba(226, 232, 240, 0.75);
   margin: 4px 0;
 }
 
 /* ==========================================================================
-   TACTICAL RADAR / MAP CONTAINER
+   TACTICAL RADAR / MAP CONTAINER - LIQUID GLASS
    ========================================================================== */
 
 .map-container-frame {
   position: relative;
   width: 100%;
-  border-radius: var(--radius-xl);
+  border-radius: var(--glass-radius);
   overflow: hidden;
-  border: 1px solid var(--color-gray-300);
-  box-shadow: var(--shadow-md);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
   background-color: #0b192c;
 }
 
@@ -1582,12 +1672,13 @@ button, input, select, textarea {
   position: absolute;
   top: 14px;
   left: 14px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
   padding: 8px 14px;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   z-index: 10;
   display: flex;
   align-items: center;
@@ -1598,12 +1689,13 @@ button, input, select, textarea {
   position: absolute;
   bottom: 14px;
   right: 14px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
   padding: 10px 16px;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   z-index: 10;
   display: flex;
   align-items: center;
@@ -1708,10 +1800,13 @@ button, input, select, textarea {
 }
 
 .detail-section {
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-200);
-  border-radius: var(--radius-lg);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
   padding: var(--space-4) var(--space-5);
+  box-shadow: var(--glass-shadow);
 }
 
 .detail-section h3 {
@@ -1732,10 +1827,12 @@ button, input, select, textarea {
 }
 
 .recorded-fields > div {
-  background: var(--color-gray-50);
+  background: rgba(240, 246, 254, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   padding: 8px 12px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-gray-200);
+  border: 1px solid rgba(226, 232, 240, 0.75);
 }
 
 .recorded-fields dt {
@@ -1754,8 +1851,10 @@ button, input, select, textarea {
 }
 
 .history-record {
-  background: var(--color-gray-50);
-  border: 1px solid var(--color-gray-200);
+  background: rgba(240, 246, 254, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(226, 232, 240, 0.75);
   border-radius: var(--radius-md);
   padding: var(--space-3);
   margin-bottom: var(--space-3);
@@ -1773,9 +1872,11 @@ button, input, select, textarea {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: var(--color-gray-50);
+  background: rgba(240, 246, 254, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-gray-200);
+  border: 1px solid rgba(226, 232, 240, 0.75);
   font-size: var(--font-size-xs);
 }
 
@@ -1786,14 +1887,16 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   MED-AI CLINICAL CHAT & PREDICTIVE MONITOR SYSTEM
+   MED-AI CLINICAL CHAT & PREDICTIVE MONITOR SYSTEM - LIQUID GLASS
    ========================================================================== */
 
 .med-ai-chat-card {
-  background: var(--color-white);
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
   display: flex;
   flex-direction: column;
   height: 660px;
@@ -1811,8 +1914,8 @@ button, input, select, textarea {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-3);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 2px 10px rgba(11, 31, 58, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(11, 31, 58, 0.15);
 }
 
 .med-ai-chat-header-title {
@@ -1825,13 +1928,14 @@ button, input, select, textarea {
   width: 42px;
   height: 42px;
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.20);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
@@ -1867,8 +1971,10 @@ button, input, select, textarea {
 }
 
 .med-ai-safety-banner {
-  background: #EFF6FF;
-  border-bottom: 1px solid #BFDBFE;
+  background: rgba(239, 246, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(191, 219, 254, 0.7);
   padding: 10px 20px;
   font-size: var(--font-size-xs);
   color: #1E40AF;
@@ -1884,8 +1990,10 @@ button, input, select, textarea {
 
 .med-ai-quick-prompts {
   padding: 12px 20px;
-  background: var(--color-gray-50);
-  border-bottom: 1px solid var(--color-gray-200);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.75);
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
@@ -1893,8 +2001,10 @@ button, input, select, textarea {
 }
 
 .med-ai-prompt-chip {
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-300);
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   padding: 7px 14px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
@@ -1906,15 +2016,15 @@ button, input, select, textarea {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  box-shadow: var(--shadow-xs);
+  box-shadow: 0 2px 6px rgba(31, 65, 114, 0.04);
 }
 
 .med-ai-prompt-chip:hover {
-  background: var(--color-secondary-bg);
+  background: rgba(239, 246, 255, 0.95);
   border-color: var(--color-secondary);
   color: var(--color-secondary);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
 }
 
 .med-ai-messages-list {
@@ -1924,7 +2034,7 @@ button, input, select, textarea {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  background: #F8FAFD;
+  background: rgba(248, 250, 253, 0.45);
 }
 
 .med-ai-msg-row {
@@ -1973,20 +2083,23 @@ button, input, select, textarea {
   line-height: var(--line-height-relaxed);
   position: relative;
   box-shadow: var(--shadow-xs);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .med-ai-msg-row.user .med-ai-bubble {
   background: linear-gradient(135deg, var(--color-secondary) 0%, #1D4ED8 100%);
   color: #FFFFFF;
   border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.2);
 }
 
 .med-ai-msg-row.ai .med-ai-bubble {
-  background: var(--color-white);
+  background: rgba(255, 255, 255, 0.85);
   color: var(--color-text-primary);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.95);
   border-bottom-left-radius: 4px;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 16px rgba(31, 65, 114, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .med-ai-bubble-meta {
@@ -2011,27 +2124,29 @@ button, input, select, textarea {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--color-critical);
+  background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
   color: #FFFFFF;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-md);
   padding: 8px 14px;
   font-size: var(--font-size-xs);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
   transition: all var(--transition-fast);
 }
 
 .med-ai-bubble-urgent-btn:hover {
-  background: #B91C1C;
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
   transform: translateY(-1px);
 }
 
 .med-ai-input-bar {
   padding: 14px 20px;
-  background: var(--color-white);
-  border-top: 1px solid var(--color-gray-200);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(226, 232, 240, 0.75);
   display: flex;
   gap: 12px;
   align-items: center;
@@ -2041,8 +2156,8 @@ button, input, select, textarea {
   flex: 1;
   padding: 12px 18px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--color-gray-300);
-  background: var(--color-gray-50);
+  border: 1px solid rgba(203, 213, 225, 0.85);
+  background: rgba(255, 255, 255, 0.8);
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   outline: none;
@@ -2050,9 +2165,9 @@ button, input, select, textarea {
 }
 
 .med-ai-input-field:focus {
-  background: var(--color-white);
+  background: #FFFFFF;
   border-color: var(--color-secondary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
 }
 
 .med-ai-typing-indicator {
@@ -2060,8 +2175,9 @@ button, input, select, textarea {
   align-items: center;
   gap: 4px;
   padding: 8px 14px;
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-200);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
@@ -2083,12 +2199,14 @@ button, input, select, textarea {
   animation-delay: 0.4s;
 }
 
-/* AI Health Monitor Card inside Overview */
+/* AI Health Monitor Card inside Overview - Liquid Glass */
 .med-ai-monitor-card {
-  background: var(--color-white);
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
   padding: var(--space-5);
   display: flex;
   flex-direction: column;
@@ -2113,7 +2231,7 @@ button, input, select, textarea {
 .med-ai-gauge-track {
   width: 100%;
   height: 10px;
-  background: var(--color-gray-100);
+  background: rgba(226, 232, 240, 0.75);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -2129,9 +2247,11 @@ button, input, select, textarea {
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--space-3);
   padding: 14px;
-  background: #F8FAFD;
+  background: rgba(240, 246, 254, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-gray-200);
+  border: 1px solid rgba(226, 232, 240, 0.75);
 }
 
 .med-ai-metric-item {
@@ -2155,15 +2275,17 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   FAMILY GUARDIAN CONSOLE SYSTEM
+   FAMILY GUARDIAN CONSOLE SYSTEM - LIQUID GLASS
    ========================================================================== */
 
 .family-patient-card {
-  background: var(--color-white);
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: var(--radius-lg);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
   padding: var(--space-4) var(--space-5);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--glass-shadow);
   transition: all var(--transition-fast);
   cursor: pointer;
   position: relative;
@@ -2173,15 +2295,15 @@ button, input, select, textarea {
 }
 
 .family-patient-card:hover {
-  border-color: var(--color-secondary);
-  box-shadow: var(--shadow-md);
+  border-color: var(--glass-border-highlight);
+  box-shadow: var(--glass-shadow-hover);
   transform: translateY(-2px);
 }
 
 .family-patient-card.selected {
   border-color: var(--color-secondary);
-  background: #F0F7FF;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+  background: rgba(239, 246, 255, 0.85);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25), var(--glass-shadow);
 }
 
 .family-patient-card-header {
@@ -2202,7 +2324,8 @@ button, input, select, textarea {
   justify-content: center;
   font-size: 18px;
   font-weight: 800;
-  box-shadow: 0 2px 6px rgba(11, 31, 58, 0.15);
+  box-shadow: 0 4px 12px rgba(11, 31, 58, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .family-relationship-badge {
@@ -2211,22 +2334,50 @@ button, input, select, textarea {
   gap: 4px;
   padding: 3px 9px;
   border-radius: var(--radius-full);
-  background: #E0F2FE;
+  background: rgba(224, 242, 254, 0.90);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: #0369A1;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
+  border: 1px solid rgba(186, 230, 253, 0.8);
 }
 
 .family-vitals-mini-bar {
   display: flex;
   justify-content: space-between;
-  background: var(--color-white);
-  border: 1px solid var(--color-gray-200);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: var(--radius-md);
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 600;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 6px rgba(31, 65, 114, 0.04);
+}
+
+/* ==========================================================================
+   ACCESSIBILITY & BACKDROP-FILTER FALLBACKS
+   ========================================================================== */
+
+@supports not (backdrop-filter: blur(10px)) {
+  .card, .glass-card, .stat-card, .vital-card, .table-wrapper, .detail-section, .med-ai-chat-card, .med-ai-monitor-card, .family-patient-card {
+    background: #FFFFFF !important;
+  }
+  .dashboard-sidebar, .dashboard-topbar, .modal-card, .dropdown-menu, .map-floating-status, .map-floating-eta {
+    background: #FFFFFF !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

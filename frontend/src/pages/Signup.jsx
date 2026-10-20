@@ -94,10 +94,7 @@ const Signup = () => {
         {/* Signup Card */}
         <div className="card" style={{ 
           padding: 'var(--space-8)', 
-          boxShadow: 'var(--shadow-xl)',
-          borderRadius: 'var(--radius-xl)',
-          background: 'var(--color-white)',
-          border: '1px solid rgba(226, 232, 240, 0.9)'
+          borderRadius: 'var(--glass-radius)'
         }}>
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-8)' }}>

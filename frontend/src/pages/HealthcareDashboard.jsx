@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, useInRouterContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API, { isActiveEmergency, useApiResource } from '../services/api';
 import { useRealtimeRefresh } from '../services/websocket';
@@ -16,12 +17,28 @@ import { EmptyState } from '../components/StateComponents';
  * Unified command center for HOSPITAL_ADMIN, DOCTOR, AMBULANCE_DRIVER, and SYSTEM_ADMIN.
  */
 
-const HealthcareDashboard = () => {
+const HealthcareDashboardInner = ({ searchParams, setSearchParams }) => {
   const { user } = useAuth();
   const role = user?.role || 'HOSPITAL_ADMIN';
 
-  // Subtabs state
-  const [activeTab, setActiveTab] = useState('');
+  const tabParam = typeof searchParams?.get === 'function' ? searchParams.get('tab') : searchParams?.tab;
+
+  const getDefaultTabForRole = useCallback((r) => {
+    if (r === 'DOCTOR') return 'cases';
+    if (r === 'HOSPITAL_ADMIN') return 'queue';
+    if (r === 'AMBULANCE_DRIVER') return 'requests';
+    return 'hospitals';
+  }, []);
+
+  const activeTab = tabParam || getDefaultTabForRole(role);
+
+  const switchTab = (tabKey) => {
+    if (tabKey === getDefaultTabForRole(role)) {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: tabKey });
+    }
+  };
 
   // Hospital, Doctor, Driver database states
   const [hospitals, setHospitals] = useState([]);
@@ -70,13 +87,6 @@ const HealthcareDashboard = () => {
     setSelectedPatientUid(emergency?.patientUid ?? null);
   };
 
-  // Set default tabs based on role
-  useEffect(() => {
-    if (role === 'DOCTOR') setActiveTab('cases');
-    else if (role === 'HOSPITAL_ADMIN') setActiveTab('queue');
-    else if (role === 'AMBULANCE_DRIVER') setActiveTab('requests');
-    else if (role === 'ADMIN' || role === 'SYSTEM_ADMIN') setActiveTab('hospitals');
-  }, [role]);
 
   // Store role-specific IDs in localStorage for WebSocket channels
   useEffect(() => {
@@ -338,67 +348,6 @@ const HealthcareDashboard = () => {
 
     return (
       <div>
-        {/* Section 6: Header */}
-        <div style={{ marginBottom: 'var(--space-6)' }}>
-          <h2 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-gray-900)' }}>
-            Hospital Overview
-          </h2>
-          <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-gray-500)', marginTop: '2px' }}>
-            Monitor incoming emergencies and coordinate care.
-          </p>
-        </div>
-
-        {/* Section 6: Top Statistics */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 'var(--space-4)',
-          marginBottom: 'var(--space-6)'
-        }}>
-          <StatCard
-            label="Active Emergencies"
-            value={activeEmergencies.length}
-            icon="🚨"
-            color={activeEmergencies.length > 0 ? 'critical' : 'primary'}
-            subtitle="Triaged by AI pipeline"
-          />
-
-          <StatCard
-            label="Critical Patients"
-            value={criticalEmergencies.length}
-            icon="⚠️"
-            color={criticalEmergencies.length > 0 ? 'critical' : 'warning'}
-            subtitle="Immediate priority"
-          />
-
-          <StatCard
-            label="Available Doctors"
-            value={doctors.filter(d => d.onDuty && d.availableForEmergency).length}
-            icon="👨‍⚕️"
-            color="success"
-            subtitle={`${doctors.filter(d => d.onDuty).length} total on duty`}
-          />
-
-          <StatCard
-            label="Active Ambulances / Beds"
-            value={`${ambulances.length} Amb / ${selectedHospital?.availableBeds || 12} Beds`}
-            icon="🚑"
-            color="info"
-            subtitle="Fleet & trauma capacity"
-          />
-        </div>
-
-        {/* Section 7: Incoming Emergency Alert */}
-        {incomingPending.map(alert => (
-          <EmergencyAlert
-            key={alert.id}
-            emergency={alert}
-            onView={(eq) => setSelectedEmergency(eq)}
-            onAccept={acceptCase}
-            role="hospital"
-          />
-        ))}
-
         {/* Navigation Tabs for Hospital Admin */}
         <div style={{
           display: 'flex',
@@ -408,7 +357,7 @@ const HealthcareDashboard = () => {
           paddingBottom: 'var(--space-3)'
         }}>
           <button
-            onClick={() => setActiveTab('queue')}
+            onClick={() => switchTab('queue')}
             className={`btn ${activeTab === 'queue' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
           >
             <span>🚑</span>
@@ -416,7 +365,7 @@ const HealthcareDashboard = () => {
           </button>
 
           <button
-            onClick={() => setActiveTab('resources')}
+            onClick={() => switchTab('resources')}
             className={`btn ${activeTab === 'resources' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
           >
             <span>🏥</span>
@@ -424,13 +373,76 @@ const HealthcareDashboard = () => {
           </button>
         </div>
 
-        {/* Emergency Queue & Details Split View - Section 8 */}
+        {/* Emergency SOS Queue & Overview - Section 6, 7, 8 */}
         {activeTab === 'queue' && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
-            gap: 'var(--space-5)'
-          }}>
+          <>
+            {/* Section 6: Header */}
+            <div style={{ marginBottom: 'var(--space-6)' }}>
+              <h2 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 800, color: 'var(--color-gray-900)' }}>
+                Hospital Overview & Emergency Queue
+              </h2>
+              <p style={{ fontSize: 'var(--font-size-base)', color: 'var(--color-gray-500)', marginTop: '2px' }}>
+                Monitor incoming emergencies and coordinate care.
+              </p>
+            </div>
+
+            {/* Section 6: Top Statistics */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 'var(--space-4)',
+              marginBottom: 'var(--space-6)'
+            }}>
+              <StatCard
+                label="Active Emergencies"
+                value={activeEmergencies.length}
+                icon="🚨"
+                color={activeEmergencies.length > 0 ? 'critical' : 'primary'}
+                subtitle="Triaged by AI pipeline"
+              />
+
+              <StatCard
+                label="Critical Patients"
+                value={criticalEmergencies.length}
+                icon="⚠️"
+                color={criticalEmergencies.length > 0 ? 'critical' : 'warning'}
+                subtitle="Immediate priority"
+              />
+
+              <StatCard
+                label="Available Doctors"
+                value={doctors.filter(d => d.onDuty && d.availableForEmergency).length}
+                icon="👨‍⚕️"
+                color="success"
+                subtitle={`${doctors.filter(d => d.onDuty).length} total on duty`}
+              />
+
+              <StatCard
+                label="Active Ambulances / Beds"
+                value={`${ambulances.length} Amb / ${selectedHospital?.availableBeds || 12} Beds`}
+                icon="🚑"
+                color="info"
+                subtitle="Fleet & trauma capacity"
+              />
+            </div>
+
+            {/* Section 7: Incoming Emergency Alert */}
+            {incomingPending.map(alert => (
+              <EmergencyAlert
+                key={alert.id}
+                emergency={alert}
+                onView={(eq) => setSelectedEmergency(eq)}
+                onAccept={acceptCase}
+                role="hospital"
+              />
+            ))}
+
+            {/* Emergency Queue & Details Split View - Section 8 */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
+              gap: 'var(--space-5)'
+            }}>
             {/* Queue List */}
             <div className="card">
               <div className="card-header">
@@ -636,7 +648,8 @@ const HealthcareDashboard = () => {
               )}
             </div>
           </div>
-        )}
+        </>
+      )}
 
         {/* Resources Tab (Beds & Staff) */}
         {activeTab === 'resources' && (
@@ -1549,11 +1562,11 @@ const HealthcareDashboard = () => {
     <DashboardLayout
       title={
         role === 'DOCTOR'
-          ? 'Doctor Portal'
+          ? 'Physician Emergency Portal'
           : role === 'AMBULANCE_DRIVER'
-          ? 'Ambulance Console'
+          ? 'Ambulance Command Console'
           : role === 'HOSPITAL_ADMIN'
-          ? 'Hospital Command Center'
+          ? (activeTab === 'resources' ? 'Hospital Command Center — Resources' : 'Hospital Command Center — SOS Queue')
           : 'System Admin Portal'
       }
       user={user}
@@ -1565,6 +1578,29 @@ const HealthcareDashboard = () => {
       {(role === 'ADMIN' || role === 'SYSTEM_ADMIN') && renderAdminView()}
     </DashboardLayout>
   );
+};
+
+const HealthcareDashboardWithRouter = (props) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  return <HealthcareDashboardInner {...props} searchParams={searchParams} setSearchParams={setSearchParams} />;
+};
+
+const HealthcareDashboardWithoutRouter = (props) => {
+  const [params, setParamsState] = useState(
+    () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+  );
+  const setSearchParams = (next) => {
+    setParamsState(new URLSearchParams(next));
+  };
+  return <HealthcareDashboardInner {...props} searchParams={params} setSearchParams={setSearchParams} />;
+};
+
+const HealthcareDashboard = (props) => {
+  const inRouter = useInRouterContext();
+  if (inRouter) {
+    return <HealthcareDashboardWithRouter {...props} />;
+  }
+  return <HealthcareDashboardWithoutRouter {...props} />;
 };
 
 export default HealthcareDashboard;

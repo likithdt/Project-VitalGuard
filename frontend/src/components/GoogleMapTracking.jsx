@@ -50,8 +50,16 @@ const GoogleMapTracking = ({
   const [distance, setDistance] = useState(null);
   const [eta, setEta] = useState(null);
   const [isFollowing, setIsFollowing] = useState(followAmbulance);
+  const [googleAuthFailed, setGoogleAuthFailed] = useState(false);
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const rawApiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
+  const isKeyUsable = Boolean(
+    rawApiKey &&
+    rawApiKey.length >= 25 &&
+    !rawApiKey.includes('your_google_maps_api_key') &&
+    !rawApiKey.includes('YOUR_API_KEY') &&
+    !rawApiKey.includes('placeholder')
+  );
 
   // Haversine distance calculator
   const calcDistance = (lat1, lon1, lat2, lon2) => {
@@ -166,6 +174,13 @@ const GoogleMapTracking = ({
 
       leafletMapInstanceRef.current = map;
       setMapProvider('leaflet');
+      setTimeout(() => {
+        try {
+          map.invalidateSize();
+        } catch {
+          // ignore
+        }
+      }, 150);
       if (onMapLoad) onMapLoad(map);
       return true;
     } catch (err) {
@@ -399,14 +414,31 @@ const GoogleMapTracking = ({
     isFollowing
   ]);
 
+  // Auth failure listener for Google Maps
+  useEffect(() => {
+    window.gm_authFailure = () => {
+      console.warn('[VitalGuard] Google Maps authentication failed. Seamlessly switching to Leaflet OpenStreetMap carrier.');
+      setGoogleAuthFailed(true);
+      if (googleMapInstanceRef.current && containerRef.current) {
+        containerRef.current.innerHTML = '';
+        googleMapInstanceRef.current = null;
+      }
+      initLeafletMap();
+    };
+
+    return () => {
+      delete window.gm_authFailure;
+    };
+  }, [initLeafletMap]);
+
   // Handle Map Initialization on Mount
   useEffect(() => {
     let initialized = false;
 
-    // Check if Google Maps is requested and has valid key
-    if (apiKey) {
+    // Check if Google Maps is requested and has a valid, non-placeholder key and has not failed auth
+    if (isKeyUsable && !googleAuthFailed) {
       loaderRef.current = new Loader({
-        apiKey,
+        apiKey: rawApiKey,
         version: 'weekly',
         libraries: ['routes', 'marker']
       });
@@ -430,12 +462,12 @@ const GoogleMapTracking = ({
           initialized = true;
           if (onMapLoad) onMapLoad(map);
         })
-        .catch(() => {
-          // Fall back to Leaflet if Google Maps fails
+        .catch((err) => {
+          console.warn('[VitalGuard] Google Maps failed to load, switching to Leaflet:', err);
           if (!initialized) initLeafletMap();
         });
     } else {
-      // Direct Leaflet initialization
+      // Direct Leaflet initialization (no API key required, 100% free road tiles)
       const leafletSuccess = initLeafletMap();
       if (!leafletSuccess) {
         setMapProvider('canvas');
@@ -452,7 +484,7 @@ const GoogleMapTracking = ({
         leafletMapInstanceRef.current = null;
       }
     };
-  }, [apiKey, initLeafletMap, onMapLoad]);
+  }, [isKeyUsable, rawApiKey, googleAuthFailed, initLeafletMap, onMapLoad]);
 
   // Update Leaflet layers whenever locations change
   useEffect(() => {
@@ -666,12 +698,12 @@ const GoogleMapTracking = ({
           backdropFilter: 'blur(8px)',
           border: '1px solid var(--color-gray-200, #E2E8F0)',
           borderRadius: '12px',
-          padding: '10px 14px',
+          padding: '8px 14px',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          zIndex: 1000,
+          zIndex: 10,
           maxWidth: '340px'
         }}
       >
@@ -699,6 +731,7 @@ const GoogleMapTracking = ({
 
       {/* Connection & Mode Indicator (Top Right) */}
       <div
+        className="map-floating-mode"
         style={{
           position: 'absolute',
           top: '14px',
@@ -706,7 +739,7 @@ const GoogleMapTracking = ({
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          zIndex: 1000
+          zIndex: 10
         }}
       >
         <div
@@ -735,8 +768,28 @@ const GoogleMapTracking = ({
               display: 'inline-block'
             }}
           />
-          <span style={{ letterSpacing: '0.04em' }}>LIVE GPS STREAMING</span>
+          <span style={{ letterSpacing: '0.04em' }}>
+            LIVE GPS STREAMING {mapProvider === 'google' ? '• GOOGLE MAPS' : (googleAuthFailed || !isKeyUsable) ? '• OPENSTREETMAP' : ''}
+          </span>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setMapProvider(p => p === 'canvas' ? 'leaflet' : 'canvas')}
+          className="btn btn-secondary btn-sm"
+          style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            padding: '5px 10px',
+            fontSize: '11px',
+            fontWeight: 700,
+            borderRadius: '8px',
+            border: '1px solid #CBD5E1',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+          }}
+          title="Toggle between Map and Tactical Radar"
+        >
+          {mapProvider === 'canvas' ? '🗺️ Map' : '📡 Radar'}
+        </button>
 
         <button
           type="button"
@@ -753,7 +806,7 @@ const GoogleMapTracking = ({
           }}
           title="Fit all markers in view"
         >
-          🔍 Fit View
+          🔍 Fit
         </button>
       </div>
 
@@ -773,7 +826,7 @@ const GoogleMapTracking = ({
           display: 'flex',
           alignItems: 'center',
           gap: '14px',
-          zIndex: 1000
+          zIndex: 10
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

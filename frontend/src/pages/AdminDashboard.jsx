@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation, useInRouterContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../services/api';
 import Sidebar from '../components/Sidebar';
@@ -9,23 +9,40 @@ import { useRealtimeRefresh } from '../services/websocket';
 import GoogleMapTracking from '../components/GoogleMapTracking';
 import CancelEmergencyModal from '../components/CancelEmergencyModal';
 
-export default function AdminDashboard({ defaultTab }) {
+function AdminDashboardInner({ defaultTab, navigate, location, searchParams, setSearchParams }) {
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
 
   // Navigation tabs: overview, doctors, hospital-admins, drivers, hospitals, ambulances, emergencies, users, audit-logs
-  const tabParam = defaultTab || searchParams.get('tab') || 'overview';
-  const [activeTab, setActiveTab] = useState(tabParam);
-
-  // Synchronize state with URL param
-  useEffect(() => {
-    const t = defaultTab || searchParams.get('tab') || 'overview';
-    setActiveTab(t);
-  }, [searchParams, defaultTab]);
+  const isAuditPath = location?.pathname?.includes('/audit-logs');
+  const queryTab = typeof searchParams?.get === 'function' ? searchParams.get('tab') : searchParams?.tab;
+  const activeTab = queryTab || defaultTab || (isAuditPath ? 'audit-logs' : 'overview');
 
   const handleTabChange = (t) => {
-    setActiveTab(t);
-    setSearchParams(t === 'overview' ? {} : { tab: t });
+    if (!navigate) {
+      setSearchParams?.(t === 'overview' ? new URLSearchParams() : new URLSearchParams({ tab: t }));
+      return;
+    }
+    if (t === 'overview') {
+      navigate('/admin');
+    } else if (t === 'audit-logs') {
+      navigate('/admin/audit-logs');
+    } else {
+      navigate(`/admin?tab=${t}`);
+    }
+  };
+
+  const getAdminPortalTitle = () => {
+    switch (activeTab) {
+      case 'doctors': return 'System Administration — Doctors Directory';
+      case 'hospital-admins': return 'System Administration — Hospital Admins';
+      case 'drivers': return 'System Administration — Ambulance Drivers';
+      case 'hospitals': return 'System Administration — Hospitals Directory';
+      case 'ambulances': return 'System Administration — Ambulances Fleet';
+      case 'emergencies': return 'System Administration — Emergency Command Center';
+      case 'users': return 'System Administration — User Accounts';
+      case 'audit-logs': return 'System Administration — Audit Trail';
+      default: return 'System Administration Portal — Overview';
+    }
   };
 
   // State data
@@ -451,7 +468,7 @@ export default function AdminDashboard({ defaultTab }) {
         />
         <div className="dashboard-main">
           <Topbar
-            title="System Administration Portal"
+            title={getAdminPortalTitle()}
             user={user}
             onMenuToggle={() => setIsSidebarOpenMobile(!isSidebarOpenMobile)}
           />
@@ -475,169 +492,6 @@ export default function AdminDashboard({ defaultTab }) {
               >
                 ✕
               </button>
-            </div>
-          )}
-
-          {/* Portal Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 'var(--space-3)', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span className="badge badge-low" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  ROLE: SYSTEM_ADMIN
-                </span>
-                <span style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
-                  Platform ID: {user?.uid || 'SYS_01'}
-                </span>
-                <div style={{
-                  background: wsConnected ? 'var(--color-success-bg, #ECFDF5)' : 'var(--color-warning-bg, #FFFBEB)',
-                  border: `1px solid ${wsConnected ? 'var(--color-success-border, #A7F3D0)' : 'var(--color-warning-border, #FDE68A)'}`,
-                  padding: '3px 10px',
-                  borderRadius: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: wsConnected ? 'var(--color-success, #059669)' : 'var(--color-warning, #D97706)'
-                }}>
-                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: wsConnected ? '#10B981' : '#F59E0B' }} />
-                  <span>{wsConnected ? 'LIVE COMMAND NETWORK SYNCHRONIZED' : 'RECONNECTING TELEMETRY...'}</span>
-                </div>
-              </div>
-              <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--color-gray-900)', marginTop: '4px' }}>
-                System Administration & Security Control
-              </h1>
-              <p style={{ color: 'var(--color-gray-500)', fontSize: '13px', marginTop: '2px' }}>
-                Privileged user provisioning, hospital federation, and multi-tenant resource authorization
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => { fetchAllData(); wsRefresh(); }} className="btn btn-secondary btn-sm" title="Refresh all registry data">
-                🔄 Sync State
-              </button>
-              <button onClick={() => setActiveModal('register-doctor')} className="btn btn-primary btn-sm">
-                + Register Doctor
-              </button>
-              <button onClick={() => setActiveModal('register-admin')} className="btn btn-primary btn-sm">
-                + Register Hospital Admin
-              </button>
-              <button onClick={() => setActiveModal('register-driver')} className="btn btn-primary btn-sm">
-                + Register Driver
-              </button>
-            </div>
-          </div>
-
-          {/* Top Metric Cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: 'var(--space-4)',
-            marginBottom: 'var(--space-6)',
-            width: '100%',
-            maxWidth: '100%',
-            minWidth: 0,
-            boxSizing: 'border-box'
-          }}>
-            <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid var(--color-primary)' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Total Users</div>
-              <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--color-primary)', marginTop: '4px' }}>
-                {stats?.totalUsers ?? '...'}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Registered accounts</div>
-            </div>
-
-            <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #0284c7' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Active Doctors</div>
-              <div style={{ fontSize: '26px', fontWeight: 900, color: '#0284c7', marginTop: '4px' }}>
-                {stats?.activeDoctors ?? '...'}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Verified physicians</div>
-            </div>
-
-            <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #10b981' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Hospitals</div>
-              <div style={{ fontSize: '26px', fontWeight: 900, color: '#10b981', marginTop: '4px' }}>
-                {stats?.hospitals ?? '...'}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Active hospital hubs</div>
-            </div>
-
-            <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #f59e0b' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Ambulances</div>
-              <div style={{ fontSize: '26px', fontWeight: 900, color: '#f59e0b', marginTop: '4px' }}>
-                {stats?.ambulances ?? '...'}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Active fleet units</div>
-            </div>
-
-            <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #8b5cf6' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Ambulance Drivers</div>
-              <div style={{ fontSize: '26px', fontWeight: 900, color: '#8b5cf6', marginTop: '4px' }}>
-                {stats?.ambulanceDrivers ?? '...'}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Assigned personnel</div>
-            </div>
-
-            <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #ef4444' }}>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Active Emergencies</div>
-              <div style={{ fontSize: '26px', fontWeight: 900, color: '#ef4444', marginTop: '4px' }}>
-                {uniqueEmergencies.length}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Live SOS dispatches</div>
-            </div>
-          </div>
-
-          {/* Pending Approval / Registration Requests Banner */}
-          {pendingApprovals && pendingApprovals.length > 0 && (
-            <div className="card" style={{ marginBottom: 'var(--space-6)', border: '1px solid #f59e0b', backgroundColor: '#fffbeb', padding: 'var(--space-4)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '20px' }}>⏳</span>
-                  <div>
-                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#92400e' }}>
-                      Pending Registration & Activation Requests ({pendingApprovals.length})
-                    </h3>
-                    <p style={{ fontSize: '12px', color: '#b45309' }}>
-                      These privileged accounts require System Admin approval before they can authenticate into their dashboards.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="table-wrapper">
-                <table className="data-table" style={{ background: 'white' }}>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Requested Role</th>
-                      <th>Association</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingApprovals.map(p => (
-                      <tr key={p.id}>
-                        <td style={{ fontWeight: 800 }}>{p.fullName || 'Unnamed User'}</td>
-                        <td>{p.email}</td>
-                        <td><StatusBadge status={p.role} size="sm" /></td>
-                        <td>{p.hospitalId ? `Hospital #${p.hospitalId}` : p.ambulanceId ? `Ambulance #${p.ambulanceId}` : 'Platform'}</td>
-                        <td><StatusBadge status="PENDING" size="sm" /></td>
-                        <td style={{ display: 'flex', gap: '6px' }}>
-                          <button onClick={() => handleApproveUser(p.id)} className="btn btn-primary btn-sm" style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}>
-                            ✓ APPROVE
-                          </button>
-                          <button onClick={() => handleRejectUser(p.id)} className="btn btn-secondary btn-sm" style={{ color: '#ef4444' }}>
-                            ✕ REJECT
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
           )}
 
@@ -696,7 +550,7 @@ export default function AdminDashboard({ defaultTab }) {
             </div>
           )}
 
-          {/* Navigation Tabs */}
+          {/* Navigation Tabs (System Administration Sections) */}
           <div className="admin-tabs-container">
             <div className="admin-tabs" role="tablist" aria-label="System Administration Sections">
               {[
@@ -745,6 +599,169 @@ export default function AdminDashboard({ defaultTab }) {
           {/* ========================================================================= */}
           {activeTab === 'overview' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+              
+              {/* Portal Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-2)', flexWrap: 'wrap', gap: 'var(--space-3)', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span className="badge badge-low" style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      ROLE: SYSTEM_ADMIN
+                    </span>
+                    <span style={{ fontSize: '12px', color: 'var(--color-gray-500)' }}>
+                      Platform ID: {user?.uid || 'SYS_01'}
+                    </span>
+                    <div style={{
+                      background: wsConnected ? 'var(--color-success-bg, #ECFDF5)' : 'var(--color-warning-bg, #FFFBEB)',
+                      border: `1px solid ${wsConnected ? 'var(--color-success-border, #A7F3D0)' : 'var(--color-warning-border, #FDE68A)'}`,
+                      padding: '3px 10px',
+                      borderRadius: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: wsConnected ? 'var(--color-success, #059669)' : 'var(--color-warning, #D97706)'
+                    }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: wsConnected ? '#10B981' : '#F59E0B' }} />
+                      <span>{wsConnected ? 'LIVE COMMAND NETWORK SYNCHRONIZED' : 'RECONNECTING TELEMETRY...'}</span>
+                    </div>
+                  </div>
+                  <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--color-gray-900)', marginTop: '4px' }}>
+                    System Administration & Security Control
+                  </h1>
+                  <p style={{ color: 'var(--color-gray-500)', fontSize: '13px', marginTop: '2px' }}>
+                    Privileged user provisioning, hospital federation, and multi-tenant resource authorization
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => { fetchAllData(); wsRefresh(); }} className="btn btn-secondary btn-sm" title="Refresh all registry data">
+                    🔄 Sync State
+                  </button>
+                  <button onClick={() => setActiveModal('register-doctor')} className="btn btn-primary btn-sm">
+                    + Register Doctor
+                  </button>
+                  <button onClick={() => setActiveModal('register-admin')} className="btn btn-primary btn-sm">
+                    + Register Hospital Admin
+                  </button>
+                  <button onClick={() => setActiveModal('register-driver')} className="btn btn-primary btn-sm">
+                    + Register Driver
+                  </button>
+                </div>
+              </div>
+
+              {/* Top Metric Cards */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: 'var(--space-4)',
+                marginBottom: 'var(--space-2)',
+                width: '100%',
+                maxWidth: '100%',
+                minWidth: 0,
+                boxSizing: 'border-box'
+              }}>
+                <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid var(--color-primary)' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Total Users</div>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--color-primary)', marginTop: '4px' }}>
+                    {stats?.totalUsers ?? '...'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Registered accounts</div>
+                </div>
+
+                <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #0284c7' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Active Doctors</div>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: '#0284c7', marginTop: '4px' }}>
+                    {stats?.activeDoctors ?? '...'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Verified physicians</div>
+                </div>
+
+                <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #10b981' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Hospitals</div>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: '#10b981', marginTop: '4px' }}>
+                    {stats?.hospitals ?? '...'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Active hospital hubs</div>
+                </div>
+
+                <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #f59e0b' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Ambulances</div>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: '#f59e0b', marginTop: '4px' }}>
+                    {stats?.ambulances ?? '...'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Active fleet units</div>
+                </div>
+
+                <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #8b5cf6' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Ambulance Drivers</div>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: '#8b5cf6', marginTop: '4px' }}>
+                    {stats?.ambulanceDrivers ?? '...'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Assigned personnel</div>
+                </div>
+
+                <div className="card" style={{ padding: 'var(--space-4)', borderLeft: '4px solid #ef4444' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-gray-500)', textTransform: 'uppercase' }}>Active Emergencies</div>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: '#ef4444', marginTop: '4px' }}>
+                    {uniqueEmergencies.length}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-gray-500)', marginTop: '2px' }}>Live SOS dispatches</div>
+                </div>
+              </div>
+
+              {/* Pending Approval / Registration Requests Banner */}
+              {pendingApprovals && pendingApprovals.length > 0 && (
+                <div className="card" style={{ marginBottom: 'var(--space-4)', border: '1px solid #f59e0b', backgroundColor: '#fffbeb', padding: 'var(--space-4)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '20px' }}>⏳</span>
+                      <div>
+                        <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#92400e' }}>
+                          Pending Registration & Activation Requests ({pendingApprovals.length})
+                        </h3>
+                        <p style={{ fontSize: '12px', color: '#b45309' }}>
+                          These privileged accounts require System Admin approval before they can authenticate into their dashboards.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="table-wrapper">
+                    <table className="data-table" style={{ background: 'white' }}>
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Requested Role</th>
+                          <th>Association</th>
+                          <th>Status</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingApprovals.map(p => (
+                          <tr key={p.id}>
+                            <td style={{ fontWeight: 800 }}>{p.fullName || 'Unnamed User'}</td>
+                            <td>{p.email}</td>
+                            <td><StatusBadge status={p.role} size="sm" /></td>
+                            <td>{p.hospitalId ? `Hospital #${p.hospitalId}` : p.ambulanceId ? `Ambulance #${p.ambulanceId}` : 'Platform'}</td>
+                            <td><StatusBadge status="PENDING" size="sm" /></td>
+                            <td style={{ display: 'flex', gap: '6px' }}>
+                              <button onClick={() => handleApproveUser(p.id)} className="btn btn-primary btn-sm" style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                                ✓ APPROVE
+                              </button>
+                              <button onClick={() => handleRejectUser(p.id)} className="btn btn-secondary btn-sm" style={{ color: '#ef4444' }}>
+                                ✕ REJECT
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
               
               {/* Security and Approval Architecture Banner */}
               <div className="card" style={{ padding: 'var(--space-5)', background: 'linear-gradient(135deg, #0a2540 0%, #1e3a8a 100%)', color: 'white', width: '100%', maxWidth: '100%', minWidth: 0, boxSizing: 'border-box' }}>
@@ -2137,7 +2154,7 @@ export default function AdminDashboard({ defaultTab }) {
           {/* Modal: Register Doctor */}
           {activeModal === 'register-doctor' && (
             <div className="modal-backdrop" style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
             }}>
               <div className="card" style={{ width: '100%', maxWidth: '520px', padding: 'var(--space-6)', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -2240,7 +2257,7 @@ export default function AdminDashboard({ defaultTab }) {
           {/* Modal: Register Hospital Admin */}
           {activeModal === 'register-admin' && (
             <div className="modal-backdrop" style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
             }}>
               <div className="card" style={{ width: '100%', maxWidth: '520px', padding: 'var(--space-6)', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -2329,7 +2346,7 @@ export default function AdminDashboard({ defaultTab }) {
           {/* Modal: Register Driver */}
           {activeModal === 'register-driver' && (
             <div className="modal-backdrop" style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
             }}>
               <div className="card" style={{ width: '100%', maxWidth: '520px', padding: 'var(--space-6)', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -2415,7 +2432,7 @@ export default function AdminDashboard({ defaultTab }) {
           {/* Modal: Add Hospital */}
           {activeModal === 'add-hospital' && (
             <div className="modal-backdrop" style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
             }}>
               <div className="card" style={{ width: '100%', maxWidth: '520px', padding: 'var(--space-6)', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -2527,7 +2544,7 @@ export default function AdminDashboard({ defaultTab }) {
           {/* Modal: Add Ambulance */}
           {activeModal === 'add-ambulance' && (
             <div className="modal-backdrop" style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
             }}>
               <div className="card" style={{ width: '100%', maxWidth: '520px', padding: 'var(--space-6)' }}>
@@ -2603,7 +2620,7 @@ export default function AdminDashboard({ defaultTab }) {
           {/* Modal: View Details */}
           {activeModal === 'view-doctor' && modalItem && (
             <div className="modal-backdrop" style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
             }}>
               <div className="card" style={{ width: '100%', maxWidth: '500px', padding: 'var(--space-6)' }}>
@@ -2633,7 +2650,7 @@ export default function AdminDashboard({ defaultTab }) {
           {/* Modal: Password Setup Success Link */}
           {setupSuccessModal && (
             <div className="modal-backdrop" style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1100,
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10050,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
             }}>
               <div className="card" style={{ width: '100%', maxWidth: '560px', padding: 'var(--space-6)', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)' }}>
@@ -2720,7 +2737,7 @@ export default function AdminDashboard({ defaultTab }) {
           {/* Modal: Hospital Assignment & Triage Details / Override */}
           {isHospitalOverrideModalOpen && selectedEmergency && (
             <div className="modal-backdrop" style={{
-              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10000,
               display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
             }}>
               <div className="card" style={{ width: '100%', maxWidth: '580px', padding: 'var(--space-6)', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -2805,4 +2822,44 @@ export default function AdminDashboard({ defaultTab }) {
       </div>
     </div>
   );
+}
+
+function AdminDashboardWithRouter(props) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  return (
+    <AdminDashboardInner
+      {...props}
+      navigate={navigate}
+      location={location}
+      searchParams={searchParams}
+      setSearchParams={setSearchParams}
+    />
+  );
+}
+
+function AdminDashboardWithoutRouter(props) {
+  const [params, setParamsState] = useState(
+    () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+  );
+  const setSearchParams = (next) => {
+    setParamsState(new URLSearchParams(next));
+  };
+  return (
+    <AdminDashboardInner
+      {...props}
+      location={{ pathname: '/admin', search: '' }}
+      searchParams={params}
+      setSearchParams={setSearchParams}
+    />
+  );
+}
+
+export default function AdminDashboard(props) {
+  const inRouter = useInRouterContext();
+  if (inRouter) {
+    return <AdminDashboardWithRouter {...props} />;
+  }
+  return <AdminDashboardWithoutRouter {...props} />;
 }

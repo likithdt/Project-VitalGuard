@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useInRouterContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API, { isActiveEmergency, useApiResource } from '../services/api';
 import { useRealtimeRefresh } from '../services/websocket';
@@ -57,43 +58,22 @@ const getWorkflowAmbulanceStatus = (sos, tracking) => {
   }
 };
 
-const UserDashboard = () => {
+const UserDashboardInner = ({ searchParams, setSearchParams }) => {
   const { user } = useAuth();
   const [trackedEmergencyId, setTrackedEmergencyId] = useState(null);
-
-  // Read initial tab from URL query parameter if present
-  const getInitialTab = () => {
-    if (typeof window !== 'undefined' && window.location.search) {
-      const tabParam = new URLSearchParams(window.location.search).get('tab');
-      if (tabParam === 'chat' || tabParam === 'med-ai' || tabParam === 'advisor') return 'chat';
-      if (tabParam === 'emergency' || tabParam === 'sos') return 'emergency';
-      if (tabParam === 'history') return 'history';
-    }
-    return 'overview';
-  };
-
-  const [activeTab, setActiveTab] = useState(getInitialTab);
+  const rawTab = (typeof searchParams?.get === 'function' ? searchParams.get('tab') : searchParams?.tab) || 'overview';
+  const activeTab = (rawTab === 'chat' || rawTab === 'med-ai' || rawTab === 'advisor') ? 'chat'
+    : (rawTab === 'emergency' || rawTab === 'sos') ? 'emergency'
+    : (rawTab === 'history') ? 'history'
+    : 'overview';
 
   const switchTab = (tabKey) => {
-    setActiveTab(tabKey);
-    if (typeof window !== 'undefined' && window.history?.replaceState) {
-      const newUrl = tabKey === 'overview' ? '/user-dashboard' : `/user-dashboard?tab=${tabKey}`;
-      window.history.replaceState(null, '', newUrl);
+    if (tabKey === 'overview') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: tabKey });
     }
   };
-
-  // Listen to popstate (browser back/forward or sidebar clicks)
-  useEffect(() => {
-    const handleUrlChange = () => {
-      const tabParam = new URLSearchParams(window.location.search).get('tab');
-      if (tabParam === 'chat' || tabParam === 'med-ai' || tabParam === 'advisor') setActiveTab('chat');
-      else if (tabParam === 'emergency' || tabParam === 'sos') setActiveTab('emergency');
-      else if (tabParam === 'history') setActiveTab('history');
-      else if (tabParam === 'overview') setActiveTab('overview');
-    };
-    window.addEventListener('popstate', handleUrlChange);
-    return () => window.removeEventListener('popstate', handleUrlChange);
-  }, []);
 
   // WebSocket real-time subscription
   const { connected: wsConnected, revision, refresh, tracking: trackingData, ambulanceLocation } = useRealtimeRefresh(user?.uid, trackedEmergencyId, user?.uid, user);
@@ -1050,11 +1030,7 @@ const UserDashboard = () => {
         </div>
 
         {/* Section 4: Large Google Map Live Ambulance Tracking */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.2fr)',
-          gap: 'var(--space-5)'
-        }}>
+        <div className="dashboard-map-grid">
           <div>
             <div style={{ marginBottom: 'var(--space-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: 'var(--font-size-md)', fontWeight: 800, color: 'var(--color-gray-900)' }}>
@@ -1183,9 +1159,16 @@ const UserDashboard = () => {
     </div>
   );
 
+  const getPageTitle = () => {
+    if (activeTab === 'chat') return 'Patient Health Command — Med-AI Advisor';
+    if (activeTab === 'history') return 'Patient Health Command — Incident History';
+    if (activeTab === 'emergency') return 'Patient Health Command — Active Emergency';
+    return 'Patient Dashboard';
+  };
+
   return (
     <DashboardLayout
-      title="Patient Dashboard"
+      title={getPageTitle()}
       user={user}
       wsConnected={wsConnected}
     >
@@ -1312,6 +1295,29 @@ const UserDashboard = () => {
       />
     </DashboardLayout>
   );
+};
+
+const UserDashboardWithRouter = (props) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  return <UserDashboardInner {...props} searchParams={searchParams} setSearchParams={setSearchParams} />;
+};
+
+const UserDashboardWithoutRouter = (props) => {
+  const [params, setParamsState] = useState(
+    () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+  );
+  const setSearchParams = (next) => {
+    setParamsState(new URLSearchParams(next));
+  };
+  return <UserDashboardInner {...props} searchParams={params} setSearchParams={setSearchParams} />;
+};
+
+const UserDashboard = (props) => {
+  const inRouter = useInRouterContext();
+  if (inRouter) {
+    return <UserDashboardWithRouter {...props} />;
+  }
+  return <UserDashboardWithoutRouter {...props} />;
 };
 
 export default UserDashboard;

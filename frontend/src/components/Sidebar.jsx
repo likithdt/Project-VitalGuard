@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate, useLocation, useInRouterContext } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useInRouterContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 /**
@@ -14,6 +14,7 @@ const getNavItemsForRole = (role) => {
       return [
         { path: '/user-dashboard', label: 'Dashboard', icon: '🏥' },
         { path: '/user-dashboard?tab=chat', label: 'Med-AI Advisor', icon: '🤖' },
+        { path: '/user-dashboard?tab=history', label: 'Incident History', icon: '📋' },
         { path: '/profile', label: 'Patient Profile', icon: '👤' },
       ];
     case 'FAMILY_MEMBER':
@@ -31,6 +32,7 @@ const getNavItemsForRole = (role) => {
     case 'HOSPITAL_ADMIN':
       return [
         { path: '/healthcare-dashboard', label: 'Command Center', icon: '🏥' },
+        { path: '/healthcare-dashboard?tab=resources', label: 'Hospital Resources', icon: '🛏️' },
         { path: '/profile', label: 'Admin Profile', icon: '👤' },
       ];
     case 'AMBULANCE_DRIVER':
@@ -56,20 +58,51 @@ const getNavItemsForRole = (role) => {
       return [
         { path: '/user-dashboard', label: 'Dashboard', icon: '🏥' },
         { path: '/user-dashboard?tab=chat', label: 'Med-AI Advisor', icon: '🤖' },
+        { path: '/user-dashboard?tab=history', label: 'Incident History', icon: '📋' },
         { path: '/profile', label: 'Profile', icon: '👤' },
       ];
   }
+};
+
+const checkIsItemActive = (itemPath, currentPath, currentSearch = '') => {
+  if (itemPath === '/profile') {
+    return currentPath === '/profile';
+  }
+
+  const currentParams = new URLSearchParams(currentSearch);
+  const currentTab = currentParams.get('tab');
+
+  if (itemPath.includes('?tab=')) {
+    const [itemBase, itemQuery] = itemPath.split('?');
+    const itemParams = new URLSearchParams(itemQuery);
+    const itemTab = itemParams.get('tab');
+
+    if (currentPath === itemBase && currentTab === itemTab) {
+      return true;
+    }
+    if (currentPath === '/admin/audit-logs' && itemTab === 'audit-logs') {
+      return true;
+    }
+    return false;
+  }
+
+  if (currentPath === itemPath || (itemPath === '/admin' && currentPath === '/admin/system')) {
+    return !currentTab || currentTab === 'overview';
+  }
+
+  return false;
 };
 
 const SidebarContent = ({
   isCollapsed,
   isOpenMobile,
   onCloseMobile,
-  pathname,
-  fullPath = pathname,
+  pathname = '/',
+  search = '',
   onNavigate,
   onLogout,
-  user
+  user,
+  useRouterLink = false
 }) => {
   const role = user?.role || 'PATIENT';
   const navItems = getNavItemsForRole(role);
@@ -113,9 +146,24 @@ const SidebarContent = ({
         </div>
 
         {navItems.map((item) => {
-          const isActive = item.path.includes('?')
-            ? (fullPath === item.path)
-            : (pathname === item.path && !fullPath.includes('?tab='));
+          const isActive = checkIsItemActive(item.path, pathname, search);
+
+          if (useRouterLink) {
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => onCloseMobile?.()}
+                className={`sidebar-nav-link ${isActive ? 'active' : ''}`}
+                title={item.label}
+              >
+                <span className="sidebar-nav-icon" aria-hidden="true">
+                  {item.icon}
+                </span>
+                {!isCollapsed && <span>{item.label}</span>}
+              </Link>
+            );
+          }
 
           return (
             <a
@@ -123,7 +171,7 @@ const SidebarContent = ({
               href={item.path}
               onClick={(e) => {
                 e.preventDefault();
-                onNavigate(item.path);
+                onNavigate?.(item.path);
                 onCloseMobile?.();
               }}
               className={`sidebar-nav-link ${isActive ? 'active' : ''}`}
@@ -216,7 +264,9 @@ const SidebarWithRouter = (props) => {
       {...props}
       user={user}
       pathname={location.pathname}
+      search={location.search}
       fullPath={location.pathname + location.search}
+      useRouterLink={true}
       onNavigate={(path) => navigate(path)}
       onLogout={() => {
         logout();

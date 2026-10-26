@@ -101,8 +101,20 @@ const Profile = () => {
   const bloodGroupOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
   const familyList = profile?.familyMembers || profile?.patientRelationships || [];
 
+  const getProfileTitle = () => {
+    switch (user?.role) {
+      case 'FAMILY_MEMBER': return 'Guardian Profile';
+      case 'ADMIN':
+      case 'SYSTEM_ADMIN': return 'Admin Profile';
+      case 'DOCTOR': return 'Physician Profile';
+      case 'HOSPITAL_ADMIN': return 'Hospital Administrator Profile';
+      case 'AMBULANCE_DRIVER': return 'Ambulance Driver Profile';
+      default: return 'Patient Profile';
+    }
+  };
+
   return (
-    <DashboardLayout title="Patient Profile" user={user}>
+    <DashboardLayout title={getProfileTitle()} user={user}>
       <div style={{ maxWidth: '860px', margin: '0 auto' }}>
         {loading ? (
           <LoadingState message="Loading medical profile records..." />

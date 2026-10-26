@@ -1532,27 +1532,33 @@ button, input, select, textarea {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(11, 31, 58, 0.48);
+  background-color: rgba(11, 31, 58, 0.65);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 10000;
   padding: var(--space-4);
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .modal-card {
-  background: rgba(255, 255, 255, 0.85);
+  position: relative;
+  z-index: 10001;
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: var(--glass-blur-modal);
   -webkit-backdrop-filter: var(--glass-blur-modal);
   border-radius: 24px;
-  box-shadow: var(--glass-shadow-modal);
+  box-shadow: 0 24px 60px rgba(11, 31, 58, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.95);
   width: 100%;
   max-width: 540px;
   max-height: 90vh;
+  margin: auto;
   overflow-y: auto;
+  box-sizing: border-box;
   animation: modal-enter 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -1660,11 +1666,33 @@ button, input, select, textarea {
 .map-container-frame {
   position: relative;
   width: 100%;
+  min-width: 0;
+  min-height: 340px;
   border-radius: var(--glass-radius);
   overflow: hidden;
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
   background-color: #0b192c;
+  isolation: isolate; /* CRITICAL: Creates independent stacking context so no map element can escape */
+  z-index: 1; /* Stays below headers (30), sidebars (40), and modals (10000) */
+  box-sizing: border-box;
+}
+
+/* Ensure Leaflet controls and tiles stay bounded within the map frame */
+.map-container-frame .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  z-index: 1 !important;
+}
+
+.map-container-frame .leaflet-pane {
+  z-index: 2 !important;
+}
+
+.map-container-frame .leaflet-top,
+.map-container-frame .leaflet-bottom {
+  z-index: 5 !important;
 }
 
 /* Floating overlay cards on maps */
@@ -1672,7 +1700,7 @@ button, input, select, textarea {
   position: absolute;
   top: 14px;
   left: 14px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.9);
@@ -1683,23 +1711,128 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  max-width: 340px;
+  box-sizing: border-box;
+}
+
+.map-floating-mode {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+  box-sizing: border-box;
 }
 
 .map-floating-eta {
   position: absolute;
   bottom: 14px;
   right: 14px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 14px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   z-index: 10;
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  box-sizing: border-box;
+}
+
+/* Responsive grid for map + timeline sections */
+.dashboard-map-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr);
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 992px) {
+  .dashboard-map-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .map-floating-status {
+    top: 10px !important;
+    left: 10px !important;
+    right: 10px !important;
+    max-width: calc(100% - 20px) !important;
+    padding: 8px 10px !important;
+  }
+
+  .map-floating-mode {
+    top: 68px !important;
+    right: 10px !important;
+  }
+
+  .map-floating-eta {
+    bottom: 10px !important;
+    left: 10px !important;
+    right: 10px !important;
+    max-width: calc(100% - 20px) !important;
+    justify-content: space-between !important;
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+
+  .map-container-frame .leaflet-bottom.leaflet-left {
+    bottom: 64px !important;
+  }
+}
+
+/* Table container aliases for consistent scrolling */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
+  margin-bottom: var(--space-4);
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--font-size-sm);
+}
+
+.table th {
+  background-color: rgba(240, 246, 254, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 13px 18px;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.75);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 14px 18px;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.65);
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background-color: rgba(37, 99, 235, 0.04);
 }
 
 /* ==========================================================================

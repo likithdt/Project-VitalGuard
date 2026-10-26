@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams, useInRouterContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API, { isActiveEmergency, useApiResource } from '../services/api';
 import { useRealtimeRefresh } from '../services/websocket';
@@ -57,44 +58,23 @@ const getWorkflowAmbulanceStatus = (sos, tracking) => {
   }
 };
 
-const FamilyDashboard = () => {
+const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
   const { user } = useAuth();
   const [selectedPatientUid, setSelectedPatientUid] = useState(null);
   const [trackedEmergencyId, setTrackedEmergencyId] = useState(null);
-
-  // Tab state synced with URL search params if present
-  const getInitialTab = () => {
-    if (typeof window !== 'undefined' && window.location.search) {
-      const tabParam = new URLSearchParams(window.location.search).get('tab');
-      if (tabParam === 'telemetry' || tabParam === 'vitals') return 'telemetry';
-      if (tabParam === 'emergency' || tabParam === 'sos') return 'emergency';
-      if (tabParam === 'history') return 'history';
-    }
-    return 'overview';
-  };
-
-  const [activeTab, setActiveTab] = useState(getInitialTab);
+  const rawTab = (typeof searchParams?.get === 'function' ? searchParams.get('tab') : searchParams?.tab) || 'overview';
+  const activeTab = (rawTab === 'telemetry' || rawTab === 'vitals') ? 'telemetry'
+    : (rawTab === 'emergency' || rawTab === 'sos') ? 'emergency'
+    : (rawTab === 'history') ? 'history'
+    : 'overview';
 
   const switchTab = (tabKey) => {
-    setActiveTab(tabKey);
-    if (typeof window !== 'undefined' && window.history?.replaceState) {
-      const newUrl = tabKey === 'overview' ? '/family-dashboard' : `/family-dashboard?tab=${tabKey}`;
-      window.history.replaceState(null, '', newUrl);
+    if (tabKey === 'overview') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ tab: tabKey });
     }
   };
-
-  // Listen to popstate for browser navigation
-  useEffect(() => {
-    const handleUrlChange = () => {
-      const tabParam = new URLSearchParams(window.location.search).get('tab');
-      if (tabParam === 'telemetry' || tabParam === 'vitals') setActiveTab('telemetry');
-      else if (tabParam === 'emergency' || tabParam === 'sos') setActiveTab('emergency');
-      else if (tabParam === 'history') setActiveTab('history');
-      else if (tabParam === 'overview') setActiveTab('overview');
-    };
-    window.addEventListener('popstate', handleUrlChange);
-    return () => window.removeEventListener('popstate', handleUrlChange);
-  }, []);
 
   // WebSocket real-time subscription for family member & selected patient
   const { connected: wsConnected, revision, refresh, tracking: trackingData } = useRealtimeRefresh(
@@ -558,11 +538,7 @@ const FamilyDashboard = () => {
         </div>
 
         {/* Live Google Maps Tracking and Timeline */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.2fr)',
-          gap: 'var(--space-5)'
-        }}>
+        <div className="dashboard-map-grid">
           <div>
             <div style={{ marginBottom: 'var(--space-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: 'var(--font-size-md)', fontWeight: 800, color: 'var(--color-gray-900)' }}>
@@ -775,9 +751,16 @@ const FamilyDashboard = () => {
     </div>
   );
 
+  const getPageTitle = () => {
+    if (activeTab === 'telemetry') return 'Family Guardian Console — Live Telemetry';
+    if (activeTab === 'history') return 'Family Guardian Console — Incident History';
+    if (activeTab === 'emergency') return 'Family Guardian Console — Active Emergency';
+    return 'Family Guardian Console';
+  };
+
   return (
     <DashboardLayout
-      title="Family Guardian Console"
+      title={getPageTitle()}
       user={user}
       wsConnected={wsConnected}
     >
@@ -847,6 +830,29 @@ const FamilyDashboard = () => {
       />
     </DashboardLayout>
   );
+};
+
+const FamilyDashboardWithRouter = (props) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  return <FamilyDashboardInner {...props} searchParams={searchParams} setSearchParams={setSearchParams} />;
+};
+
+const FamilyDashboardWithoutRouter = (props) => {
+  const [params, setParamsState] = useState(
+    () => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+  );
+  const setSearchParams = (next) => {
+    setParamsState(new URLSearchParams(next));
+  };
+  return <FamilyDashboardInner {...props} searchParams={params} setSearchParams={setSearchParams} />;
+};
+
+const FamilyDashboard = (props) => {
+  const inRouter = useInRouterContext();
+  if (inRouter) {
+    return <FamilyDashboardWithRouter {...props} />;
+  }
+  return <FamilyDashboardWithoutRouter {...props} />;
 };
 
 export default FamilyDashboard;

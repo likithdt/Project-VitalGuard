@@ -82,9 +82,11 @@ const EmergencyAlert = ({
           <div className="incoming-alert-item-value" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{
               fontWeight: 800,
-              color: requiresAmbulance ? 'var(--color-critical)' : 'var(--color-success)'
+              color: emergency.requiresAmbulance === true ? 'var(--color-critical)' : 
+                     emergency.requiresAmbulance === false ? 'var(--color-success)' : 'var(--color-warning)'
             }}>
-              {requiresAmbulance ? '🚑 YES' : '✓ NO'}
+              {emergency.requiresAmbulance === true ? '🚑 YES' : 
+               emergency.requiresAmbulance === false ? '✓ NO' : '⏳ Pending Doctor Assessment'}
             </span>
           </div>
         </div>
@@ -108,8 +110,14 @@ const EmergencyAlert = ({
         flexWrap: 'wrap'
       }}>
         {onDecline && (
-          <button onClick={() => onDecline(emergency.id)} className="btn btn-secondary btn-sm">
-            Decline
+          <button
+            onClick={() => onDecline(emergency.id)}
+            className="btn btn-secondary btn-sm"
+            style={{ fontWeight: 800, color: 'var(--color-critical)' }}
+            data-testid="reject-emergency-btn"
+            aria-label="Reject Emergency"
+          >
+            ✕ REJECT EMERGENCY
           </button>
         )}
 
@@ -137,6 +145,8 @@ const EmergencyAlert = ({
             onClick={() => onAccept(emergency.id)}
             className="btn btn-critical btn-sm"
             style={{ fontWeight: 800, padding: '8px 16px' }}
+            data-testid="accept-emergency-btn"
+            aria-label="Accept Emergency"
           >
             ✓ ACCEPT EMERGENCY
           </button>

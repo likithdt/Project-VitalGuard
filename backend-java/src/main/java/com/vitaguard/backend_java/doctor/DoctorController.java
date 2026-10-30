@@ -87,7 +87,11 @@ public class DoctorController {
         }
 
         Doctor doctor = doctorOpt.get();
-        List<EmergencyRequest> emergencies = emergencyRepository.findByDoctorId(doctor.getId());
+        List<EmergencyRequest> emergencies = emergencyRepository.findByDoctorId(doctor.getId()).stream()
+                .filter(e -> !"RESOLVED".equalsIgnoreCase(e.getStatus())
+                          && !"COMPLETED".equalsIgnoreCase(e.getStatus())
+                          && !"CANCELLED".equalsIgnoreCase(e.getStatus()))
+                .toList();
         return ResponseEntity.ok(enrichEmergencies(emergencies));
     }
 

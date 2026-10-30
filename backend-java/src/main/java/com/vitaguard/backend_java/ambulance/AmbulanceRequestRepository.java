@@ -1,7 +1,10 @@
 package com.vitaguard.backend_java.ambulance;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -22,4 +25,10 @@ public interface AmbulanceRequestRepository extends JpaRepository<AmbulanceReque
     boolean existsByEmergencyIdAndStatusIn(Long emergencyId, List<String> statuses);
 
     List<AmbulanceRequest> findByEmergencyIdAndStatusIn(Long emergencyId, List<String> statuses);
+
+    List<AmbulanceRequest> findByStatusIn(List<String> statuses);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT ar FROM AmbulanceRequest ar WHERE ar.id = :id")
+    Optional<AmbulanceRequest> findByIdForUpdate(@Param("id") Long id);
 }

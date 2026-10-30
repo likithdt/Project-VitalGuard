@@ -253,6 +253,50 @@ class AmbulanceServiceTest {
     }
 
     @Test
+    void testScenarioC_TwoDriversAttemptToAcceptSameRequest_OnlyOneSucceeds() {
+        // Arrange
+        Long requestId = 10L;
+        Long driver1Id = 1L;
+        Long driver2Id = 2L;
+
+        User driver1 = new User();
+        driver1.setId(driver1Id);
+
+        Ambulance ambulance1 = new Ambulance();
+        ambulance1.setId(1L);
+        ambulance1.setDriver(driver1);
+
+        EmergencyRequest emergency = new EmergencyRequest();
+        emergency.setId(100L);
+        emergency.setStatus("AMBULANCE_REQUESTED");
+
+        AmbulanceRequest request = new AmbulanceRequest(100L, 1L, 3.5, 7);
+        request.setId(requestId);
+        request.setStatus("PENDING");
+
+        when(requestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(ambulanceRepository.findById(1L)).thenReturn(Optional.of(ambulance1));
+        when(requestRepository.findByEmergencyIdAndStatusIn(100L, List.of("ACCEPTED"))).thenReturn(List.of());
+        when(emergencyRepository.findById(100L)).thenReturn(Optional.of(emergency));
+        when(requestRepository.save(any())).thenReturn(request);
+        when(ambulanceRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(emergencyRepository.save(any())).thenReturn(emergency);
+
+        // Act 1: Driver 1 accepts the request
+        boolean driver1Result = ambulanceService.acceptRequest(requestId, driver1Id);
+
+        // Assert 1: Driver 1 succeeds, request is now ACCEPTED
+        assertTrue(driver1Result);
+        assertEquals("ACCEPTED", request.getStatus());
+
+        // Act 2: Driver 2 attempts to accept the now-ACCEPTED request
+        boolean driver2Result = ambulanceService.acceptRequest(requestId, driver2Id);
+
+        // Assert 2: Driver 2 fails (cannot claim already accepted request)
+        assertFalse(driver2Result);
+    }
+
+    @Test
     void testDeclineRequest_Success_RequestsNextAmbulance() {
         // Arrange
         Long requestId = 1L;

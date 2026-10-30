@@ -465,6 +465,8 @@ function AdminDashboardInner({ defaultTab, navigate, location, searchParams, set
         <Sidebar
           isOpenMobile={isSidebarOpenMobile}
           onCloseMobile={() => setIsSidebarOpenMobile(false)}
+          activeSubtab={activeTab}
+          onSelectSubtab={handleTabChange}
         />
         <div className="dashboard-main">
           <Topbar
@@ -549,50 +551,6 @@ function AdminDashboardInner({ defaultTab, navigate, location, searchParams, set
               </div>
             </div>
           )}
-
-          {/* Navigation Tabs (System Administration Sections) */}
-          <div className="admin-tabs-container">
-            <div className="admin-tabs" role="tablist" aria-label="System Administration Sections">
-              {[
-                { id: 'overview', label: '📊 System Overview', count: null },
-                { id: 'doctors', label: '👨‍⚕️ Doctors', count: doctors.length },
-                { id: 'hospital-admins', label: '🏥 Hospital Admins', count: hospitalAdmins.length },
-                { id: 'drivers', label: '🚑 Ambulance Drivers', count: drivers.length },
-                { id: 'hospitals', label: '🏢 Hospitals', count: hospitals.length },
-                { id: 'ambulances', label: '🚨 Ambulances', count: ambulances.length },
-                { id: 'emergencies', label: '📡 System Emergencies', count: uniqueEmergencies.length },
-                { id: 'users', label: '👥 User Accounts', count: users.length },
-                { id: 'audit-logs', label: '📜 Audit Trail', count: auditLogs.length },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`btn btn-sm admin-tab-btn ${activeTab === tab.id ? 'btn-primary' : 'btn-ghost'}`}
-                  style={{
-                    fontWeight: activeTab === tab.id ? 800 : 600,
-                    borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
-                    padding: '8px 14px'
-                  }}
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                >
-                  <span>{tab.label}</span>
-                  {tab.count !== null && (
-                    <span style={{
-                      marginLeft: '6px',
-                      padding: '2px 6px',
-                      borderRadius: '10px',
-                      fontSize: '10px',
-                      backgroundColor: activeTab === tab.id ? 'rgba(255,255,255,0.25)' : 'var(--color-gray-200)',
-                      color: activeTab === tab.id ? 'white' : 'var(--color-gray-700)'
-                    }}>
-                      {tab.count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* ========================================================================= */}
           {/* TAB 1: OVERVIEW & PIPELINE ARCHITECTURE */}

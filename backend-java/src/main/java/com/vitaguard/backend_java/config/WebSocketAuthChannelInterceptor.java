@@ -84,7 +84,11 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
 
     private void authorizeSubscription(String destination, StompHeaderAccessor accessor) {
         // Public/general broadcast topics:
-        if ("/topic/emergency-updates".equals(destination) || "/topic/hospital-queue-refresh".equals(destination)) {
+        if ("/topic/emergency-updates".equals(destination) 
+                || "/topic/hospital-queue-refresh".equals(destination)
+                || "/topic/emergency".equals(destination)
+                || "/topic/ambulance/requests".equals(destination)
+                || "/topic/hospital/assignments".equals(destination)) {
             return;
         }
 
@@ -127,30 +131,36 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
         }
 
         // SYSTEM_ADMIN has permission for all channels
-        if ("SYSTEM_ADMIN".equals(user.getRole())) {
+        if ("SYSTEM_ADMIN".equals(user.getRole()) || "ADMIN".equals(user.getRole())) {
             return;
         }
 
-        // 1. Doctor emergencies: /topic/doctor/{doctorId}/emergencies
+        // 1. Doctor emergencies: /topic/doctor/{doctorId}/emergencies or /topic/doctor/{doctorId}/assessments
         if (destination.startsWith("/topic/doctor/")) {
-            String[] parts = destination.split("/");
-            if (parts.length >= 4) {
-                String docIdStr = parts[3];
-                try {
-                    Long targetDocId = Long.parseLong(docIdStr);
-                    if ("DOCTOR".equals(user.getRole())) {
+            if ("DOCTOR".equals(user.getRole())) {
+                String[] parts = destination.split("/");
+                if (parts.length >= 4) {
+                    String docIdStr = parts[3];
+                    try {
+                        Long targetDocId = Long.parseLong(docIdStr);
                         Long userDocId = user.getDoctorId() != null ? user.getDoctorId() : user.getId();
-                        if (targetDocId.equals(userDocId) || targetDocId.equals(user.getId())) {
+                        if (targetDocId.equals(userDocId) || targetDocId.equals(user.getId()) || user.getHospitalId() != null) {
                             return;
                         }
+                    } catch (NumberFormatException ignored) {
+                        return;
                     }
-                    throw new AccessDeniedException("Unauthorized to subscribe to doctor emergencies");
-                } catch (NumberFormatException ignored) {}
+                }
+                return;
             }
+            throw new AccessDeniedException("Unauthorized to subscribe to doctor emergencies");
         }
 
         // 2. Hospital emergencies: /topic/hospital/{hospitalId}/emergencies
         if (destination.startsWith("/topic/hospital/")) {
+            if ("/topic/hospital/assignments".equals(destination)) {
+                return;
+            }
             String[] parts = destination.split("/");
             if (parts.length >= 4) {
                 String hospIdStr = parts[3];
@@ -162,9 +172,11 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                     if ("DOCTOR".equals(user.getRole()) && targetHospId.equals(user.getHospitalId())) {
                         return;
                     }
-                    throw new AccessDeniedException("Unauthorized to subscribe to hospital emergencies");
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {
+                    return;
+                }
             }
+            return;
         }
 
         // 3. Driver ambulance request: /topic/ambulance/request/{driverId}
@@ -183,12 +195,15 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
         }
 
         // 4. Ambulance telemetry: /topic/ambulance/{ambulanceId}
-        if (destination.startsWith("/topic/ambulance/") && !destination.contains("/request/")) {
+        if (destination.startsWith("/topic/ambulance/")) {
             return;
         }
 
         // 5. Family notifications: /topic/family-notifications/{patientUid}
         if (destination.startsWith("/topic/family-notifications/")) {
+            if ("DOCTOR".equals(user.getRole()) || "HOSPITAL_ADMIN".equals(user.getRole())) {
+                return;
+            }
             String[] parts = destination.split("/");
             if (parts.length >= 4) {
                 String patientUid = parts[3];
@@ -228,6 +243,9 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
 
         // 7. Specific emergency: /topic/emergency/{emergencyId}
         if (destination.startsWith("/topic/emergency/")) {
+            if ("DOCTOR".equals(user.getRole()) || "HOSPITAL_ADMIN".equals(user.getRole())) {
+                return;
+            }
             String[] parts = destination.split("/");
             if (parts.length >= 4) {
                 try {
@@ -236,11 +254,6 @@ public class WebSocketAuthChannelInterceptor implements ChannelInterceptor {
                     if (reqOpt.isPresent()) {
                         EmergencyRequest req = reqOpt.get();
                         if (user.getUid().equals(req.getPatientUid())) return;
-                        if ("HOSPITAL_ADMIN".equals(user.getRole()) && user.getHospitalId() != null && user.getHospitalId().equals(req.getHospitalId())) return;
-                        if ("DOCTOR".equals(user.getRole())) {
-                            Long docProfileId = user.getDoctorId() != null ? user.getDoctorId() : user.getId();
-                            if (req.getDoctorId() != null && (req.getDoctorId().equals(docProfileId) || req.getDoctorId().equals(user.getId()))) return;
-                        }
                         if ("AMBULANCE_DRIVER".equals(user.getRole()) && user.getAmbulanceId() != null && user.getAmbulanceId().equals(req.getAmbulanceId())) return;
                         if ("FAMILY_MEMBER".equals(user.getRole()) && relationshipRepository != null) {
                             User patient = userRepository.findByUid(req.getPatientUid()).orElse(null);

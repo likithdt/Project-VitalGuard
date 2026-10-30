@@ -10,15 +10,17 @@ import React from 'react';
 
 const DEFAULT_TIMELINE_STEPS = [
   { key: 'DETECTED', label: 'Detected', description: 'Emergency condition detected and triaged' },
-  { key: 'HOSPITAL_ASSIGNED', label: 'Hospital Assigned', description: 'Assigned to nearest capable hospital' },
+  { key: 'HOSPITAL_ASSIGNED', label: 'Hospital Assigned', aliases: ['PENDING_HOSPITAL_ACCEPTANCE', 'NEXT_HOSPITAL_REQUESTED'], description: 'Assigned to nearest capable hospital' },
   { key: 'HOSPITAL_ACCEPTED', label: 'Hospital Accepted', description: 'Hospital command center accepted case' },
-  { key: 'DOCTOR_ASSIGNED', label: 'Doctor Assigned', description: 'Emergency specialist physician assigned' },
-  { key: 'AMBULANCE_REQUESTED', label: 'Ambulance Requested', description: 'Emergency transit requested' },
-  { key: 'EN_ROUTE_TO_PATIENT', label: 'Ambulance En Route', aliases: ['AMBULANCE_ACCEPTED', 'AMBULANCE_DISPATCHED'], description: 'Ambulance traveling to patient' },
-  { key: 'PATIENT_PICKED_UP', label: 'Patient Picked Up', aliases: ['ARRIVED_AT_PATIENT'], description: 'Patient secured in ambulance' },
+  { key: 'DOCTOR_ASSIGNED', label: 'Doctor Assigned', aliases: ['AMBULANCE_NOT_REQUIRED'], description: 'Emergency specialist physician assigned' },
+  { key: 'AMBULANCE_REQUESTED', label: 'Ambulance Requested', aliases: ['PENDING_DRIVER_ACCEPTANCE'], description: 'Emergency transit requested' },
+  { key: 'EN_ROUTE_TO_PATIENT', label: 'Ambulance En Route', aliases: ['AMBULANCE_ACCEPTED', 'AMBULANCE_DISPATCHED', 'DRIVER_ACCEPTED', 'JOURNEY_STARTED'], description: 'Ambulance traveling to patient' },
+  { key: 'PATIENT_PICKED_UP', label: 'Patient Picked Up', aliases: ['ARRIVED_AT_PATIENT', 'ARRIVED_AT_PICKUP', 'PATIENT_ONBOARD'], description: 'Patient secured in ambulance' },
   { key: 'ARRIVED_AT_HOSPITAL', label: 'Arrived at Hospital', aliases: ['EN_ROUTE_TO_HOSPITAL'], description: 'Ambulance arrived at emergency department' },
-  { key: 'RESOLVED', label: 'Resolved', description: 'Patient safely admitted and care transitioned' },
+  { key: 'RESOLVED', label: 'Resolved', aliases: ['COMPLETED'], description: 'Patient safely admitted and care transitioned' },
 ];
+
+const TERMINAL_STATUSES = ['CANCELLED', 'RESOLVED', 'COMPLETED'];
 
 const EmergencyTimeline = ({ currentStatus, timestamps = {}, compact = false }) => {
   // Normalize currentStatus
@@ -29,9 +31,22 @@ const EmergencyTimeline = ({ currentStatus, timestamps = {}, compact = false }) 
     step => step.key === normalizedStatus || (step.aliases && step.aliases.includes(normalizedStatus))
   );
 
-  if (currentIndex === -1) {
-    if (normalizedStatus === 'RESOLVED') {
+  // Handle terminal statuses (CANCELLED, RESOLVED, COMPLETED)
+  // For terminal statuses, show the last step that was reached based on timestamps
+  // If no timestamps, default to the last completed step or DETECTED
+  const isTerminal = TERMINAL_STATUSES.includes(normalizedStatus);
+  if (currentIndex === -1 || isTerminal) {
+    if (normalizedStatus === 'RESOLVED' || normalizedStatus === 'COMPLETED') {
       currentIndex = DEFAULT_TIMELINE_STEPS.length - 1;
+    } else if (normalizedStatus === 'CANCELLED') {
+      // Find the last step that has a timestamp
+      let lastCompletedIndex = -1;
+      DEFAULT_TIMELINE_STEPS.forEach((step, idx) => {
+        const stepKeys = [step.key, ...(step.aliases || [])];
+        const hasTimestamp = stepKeys.some(k => timestamps[k]);
+        if (hasTimestamp) lastCompletedIndex = idx;
+      });
+      currentIndex = lastCompletedIndex >= 0 ? lastCompletedIndex : 0;
     } else {
       currentIndex = 0;
     }
@@ -48,11 +63,13 @@ const EmergencyTimeline = ({ currentStatus, timestamps = {}, compact = false }) 
     }
   };
 
+  const isCancelled = normalizedStatus === 'CANCELLED';
+
   return (
     <div className="timeline-container" role="list" aria-label="Emergency Workflow Timeline">
       {DEFAULT_TIMELINE_STEPS.map((step, idx) => {
         const isCompleted = idx < currentIndex || (normalizedStatus === 'RESOLVED' && idx === DEFAULT_TIMELINE_STEPS.length - 1);
-        const isActive = idx === currentIndex && normalizedStatus !== 'RESOLVED';
+        const isActive = idx === currentIndex && !isCancelled && normalizedStatus !== 'RESOLVED';
         const isPending = idx > currentIndex;
 
         const stateClass = isCompleted ? 'completed' : isActive ? 'active' : 'pending';
@@ -88,6 +105,12 @@ const EmergencyTimeline = ({ currentStatus, timestamps = {}, compact = false }) 
           </div>
         );
       })}
+      {isCancelled && (
+        <div style={{ marginTop: '12px', padding: '8px 12px', background: 'var(--color-critical-bg)', border: '1px solid var(--color-critical-border)', borderRadius: 'var(--radius-md)', color: 'var(--color-critical)', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>✕</span>
+          <span>Emergency was cancelled</span>
+        </div>
+      )}
     </div>
   );
 };

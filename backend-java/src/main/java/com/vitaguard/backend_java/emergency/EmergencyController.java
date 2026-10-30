@@ -105,10 +105,36 @@ public class EmergencyController {
 
     @PostMapping("/sos")
     public ResponseEntity<?> triggerSos(@RequestBody Map<String, Object> body) {
-        String patientUid = SecurityContextHolder.getContext().getAuthentication().getName();
+        String requesterUid = SecurityContextHolder.getContext().getAuthentication().getName();
+        User requester = userRepository.findByUid(requesterUid).orElse(null);
+        if (requester == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        String targetPatientUid = (String) body.get("patientUid");
+        if (targetPatientUid == null || targetPatientUid.isEmpty()) {
+            targetPatientUid = (String) body.get("patient_uid");
+        }
+        if (targetPatientUid == null || targetPatientUid.isEmpty()) {
+            targetPatientUid = requesterUid;
+        }
+
+        // Authorization check: requester must be patient, linked family member, or admin
+        boolean isAuthorized = requesterUid.equals(targetPatientUid) || "ADMIN".equals(requester.getRole());
+        if (!isAuthorized && relationshipRepository != null) {
+            User targetPatient = userRepository.findByUid(targetPatientUid).orElse(null);
+            if (targetPatient != null) {
+                isAuthorized = relationshipRepository.existsByPatientIdAndFamilyUserIdAndActiveTrue(targetPatient.getId(), requester.getId());
+            }
+        }
+        if (!isAuthorized) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Not authorized to request emergency for this patient"));
+        }
 
         String alertMessage = (String) body.getOrDefault("alert_message", "Emergency Alert");
         String symptomDescription = (String) body.getOrDefault("description", "");
+        String emergencyType = (String) body.getOrDefault("emergencyType", body.getOrDefault("emergency_type", "Medical Emergency"));
+        String pickupAddress = (String) body.getOrDefault("pickupAddress", body.getOrDefault("pickup_address", body.getOrDefault("address", "")));
 
         // Parse list of symptoms
         List<String> symptomsList = (List<String>) body.get("symptoms");
@@ -118,16 +144,21 @@ public class EmergencyController {
         Double lat = 12.9716;
         Double lng = 77.5946;
         if (location != null) {
-            lat = ((Number) location.getOrDefault("lat", 12.9716)).doubleValue();
-            lng = ((Number) location.getOrDefault("lng", 77.5946)).doubleValue();
+            if (location.get("lat") instanceof Number n) lat = n.doubleValue();
+            if (location.get("lng") instanceof Number n) lng = n.doubleValue();
+        } else {
+            if (body.get("lat") instanceof Number n) lat = n.doubleValue();
+            else if (body.get("latitude") instanceof Number n) lat = n.doubleValue();
+            if (body.get("lng") instanceof Number n) lng = n.doubleValue();
+            else if (body.get("longitude") instanceof Number n) lng = n.doubleValue();
         }
 
-        // Check for duplicate active emergency
-        List<EmergencyRequest> activeEmergencies = emergencyRepository.findByPatientUidAndStatusIn(patientUid, List.of(
+        // Check for duplicate active emergency on target patient
+        List<EmergencyRequest> activeEmergencies = emergencyRepository.findByPatientUidAndStatusIn(targetPatientUid, List.of(
                 "CREATED", "SEARCHING_HOSPITAL", "DETECTED", "HOSPITAL_ASSIGNED", "ACCEPTED", "HOSPITAL_ACCEPTED", "DOCTOR_ASSIGNED",
                 "FAMILY_NOTIFIED", "AMBULANCE_REQUESTED", "AMBULANCE_ACCEPTED", "AMBULANCE_DISPATCHED",
                 "EN_ROUTE_TO_PATIENT", "ARRIVED_AT_PATIENT", "PATIENT_PICKED_UP", "EN_ROUTE_TO_HOSPITAL",
-                "ARRIVED_AT_HOSPITAL", "AMBULANCE_NOT_REQUIRED"
+                "ARRIVED_AT_HOSPITAL"
         ));
         if (!activeEmergencies.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Active emergency already exists for this patient"));
@@ -140,11 +171,21 @@ public class EmergencyController {
             requiresAmbulance = (Boolean) body.get("ambulance_required");
         }
 
-        EmergencyRequest request = emergencyService.triggerSos(patientUid, lat, lng, symptoms, symptomDescription, requiresAmbulance);
+        EmergencyRequest request = emergencyService.triggerSos(targetPatientUid, lat, lng, symptoms, symptomDescription, requiresAmbulance);
+        request.setPickupAddress(pickupAddress);
+        request.setEmergencyType(emergencyType);
+        if (!requesterUid.equals(targetPatientUid)) {
+            request.setGuardianUid(requesterUid);
+        }
+        if (body.containsKey("hospitalId")) {
+            request.setHospitalId(((Number) body.get("hospitalId")).longValue());
+        }
+        emergencyRepository.save(request);
+
         return ResponseEntity.ok(request);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<?> getEmergencyRequest(@PathVariable Long id) {
         String requesterUid = SecurityContextHolder.getContext().getAuthentication().getName();
         User requester = userRepository.findByUid(requesterUid).orElse(null);
@@ -219,15 +260,15 @@ public class EmergencyController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // Verify role is HOSPITAL_ADMIN
-        if (!"HOSPITAL_ADMIN".equals(requester.getRole())) {
+        // Verify role is HOSPITAL_ADMIN or SYSTEM_ADMIN
+        if (!"HOSPITAL_ADMIN".equals(requester.getRole()) && !"SYSTEM_ADMIN".equals(requester.getRole()) && !"ADMIN".equals(requester.getRole())) {
             Map<String, String> err = new HashMap<>();
             err.put("error", "Only hospital administrators can accept emergencies");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(err);
         }
 
         // Verify hospital admin is linked to a hospital
-        if (requester.getHospitalId() == null) {
+        if (requester.getHospitalId() == null && !"SYSTEM_ADMIN".equals(requester.getRole()) && !"ADMIN".equals(requester.getRole())) {
             Map<String, String> err = new HashMap<>();
             err.put("error", "Hospital admin not linked to a hospital");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(err);
@@ -238,27 +279,143 @@ public class EmergencyController {
             return ResponseEntity.notFound().build();
         }
 
-        // Verify emergency belongs to this hospital
-        if (!requester.getHospitalId().equals(request.getHospitalId())) {
+        // Verify emergency belongs to this hospital (unless SYSTEM_ADMIN)
+        if (requester.getHospitalId() != null && !requester.getHospitalId().equals(request.getHospitalId()) && !"SYSTEM_ADMIN".equals(requester.getRole()) && !"ADMIN".equals(requester.getRole())) {
             Map<String, String> err = new HashMap<>();
             err.put("error", "This emergency is not assigned to your hospital");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(err);
         }
 
         // Verify emergency is still pending hospital acceptance
-        if (!"HOSPITAL_ASSIGNED".equals(request.getStatus())) {
+        boolean isPending = "HOSPITAL_ASSIGNED".equals(request.getStatus())
+                || "PENDING_HOSPITAL_ACCEPTANCE".equals(request.getStatus())
+                || "NEXT_HOSPITAL_REQUESTED".equals(request.getStatus())
+                || "DETECTED".equals(request.getStatus());
+
+        if (!isPending) {
             Map<String, String> err = new HashMap<>();
             err.put("error", "Emergency is no longer pending hospital acceptance. Current status: " + request.getStatus());
-            return ResponseEntity.badRequest().body(err);
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
         }
 
         try {
-            EmergencyRequest acceptedRequest = emergencyService.acceptEmergency(id, requester.getHospitalId());
+            Long targetHospitalId = requester.getHospitalId() != null ? requester.getHospitalId() : request.getHospitalId();
+            EmergencyRequest acceptedRequest;
+            if (workflowService != null) {
+                acceptedRequest = workflowService.acceptHospitalEmergency(id, targetHospitalId);
+            } else {
+                acceptedRequest = emergencyService.acceptEmergency(id, targetHospitalId);
+            }
             return ResponseEntity.ok(enrichEmergency(acceptedRequest));
+        } catch (IllegalStateException e) {
+            Map<String, String> err = new HashMap<>();
+            err.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(err);
         } catch (IllegalArgumentException e) {
             Map<String, String> err = new HashMap<>();
             err.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(err);
+        }
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<?> rejectCase(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        String requesterUid = SecurityContextHolder.getContext().getAuthentication().getName();
+        User requester = userRepository.findByUid(requesterUid).orElse(null);
+
+        if (requester == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        if (!"HOSPITAL_ADMIN".equals(requester.getRole()) && !"SYSTEM_ADMIN".equals(requester.getRole()) && !"ADMIN".equals(requester.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only hospital administrators can reject emergencies"));
+        }
+
+        if (requester.getHospitalId() == null && "HOSPITAL_ADMIN".equals(requester.getRole())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Hospital admin not linked to a hospital"));
+        }
+
+        EmergencyRequest request = emergencyRepository.findById(id).orElse(null);
+        if (request == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (requester.getHospitalId() != null && !requester.getHospitalId().equals(request.getHospitalId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "This emergency is not assigned to your hospital"));
+        }
+
+        String reason = null;
+        if (body != null && body.containsKey("reason")) {
+            reason = (String) body.get("reason");
+        }
+
+        try {
+            Long hospId = requester.getHospitalId() != null ? requester.getHospitalId() : request.getHospitalId();
+            EmergencyRequest updated;
+            if (workflowService != null) {
+                updated = workflowService.rejectHospitalEmergency(id, hospId, reason);
+            } else {
+                updated = emergencyService.rejectEmergency(id, hospId, reason);
+            }
+            return ResponseEntity.ok(enrichEmergency(updated));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping({"/{id}/ambulance-decision", "/{id}/decision"})
+    public ResponseEntity<?> setAmbulanceDecision(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        String currentUid = SecurityContextHolder.getContext().getAuthentication().getName();
+        User requester = userRepository.findByUid(currentUid).orElse(null);
+        if (requester == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        Optional<EmergencyRequest> reqOpt = emergencyRepository.findById(id);
+        if (reqOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        EmergencyRequest req = reqOpt.get();
+
+        boolean isAuthorized = false;
+        String role = requester.getRole();
+
+        if ("DOCTOR".equals(role)) {
+            if (req.getDoctorId() != null && (req.getDoctorId().equals(requester.getId()) || req.getDoctorId().equals(requester.getDoctorId()))) {
+                isAuthorized = true;
+            } else if (requester.getHospitalId() != null && requester.getHospitalId().equals(req.getHospitalId())) {
+                isAuthorized = true;
+            }
+        } else if ("HOSPITAL_ADMIN".equals(role) && requester.getHospitalId() != null 
+                && requester.getHospitalId().equals(req.getHospitalId())) {
+            isAuthorized = true;
+        } else if ("SYSTEM_ADMIN".equals(role) || "ADMIN".equals(role)) {
+            isAuthorized = true;
+        }
+
+        if (!isAuthorized) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Not authorized to assess this emergency"));
+
+        String decision = null;
+        boolean requiresAmbulance = true;
+        if (body.containsKey("decision")) {
+            decision = body.get("decision").toString();
+            requiresAmbulance = "REQUIRED".equalsIgnoreCase(decision);
+        } else if (body.containsKey("requiresAmbulance")) {
+            requiresAmbulance = Boolean.parseBoolean(body.get("requiresAmbulance").toString());
+            decision = requiresAmbulance ? "REQUIRED" : "NOT_REQUIRED";
+        }
+
+        if (workflowService != null) {
+            EmergencyRequest updated = (decision != null) 
+                    ? workflowService.setAmbulanceDecision(id, decision)
+                    : workflowService.setAmbulanceDecision(id, requiresAmbulance);
+            return ResponseEntity.ok(enrichEmergency(updated));
+        } else {
+            req.setRequiresAmbulance(requiresAmbulance);
+            req.setAmbulanceDecision(requiresAmbulance ? "REQUIRED" : "NOT_REQUIRED");
+            req.setStatus(requiresAmbulance ? "AMBULANCE_REQUESTED" : "AMBULANCE_NOT_REQUIRED");
+            emergencyRepository.save(req);
+            return ResponseEntity.ok(enrichEmergency(req));
         }
     }
 
@@ -272,11 +429,21 @@ public class EmergencyController {
         }
 
         List<EmergencyRequest> allActive = emergencyRepository.findByStatusIn(List.of(
-                "CREATED", "SEARCHING_HOSPITAL", "DETECTED", "HOSPITAL_ASSIGNED", "ACCEPTED", "HOSPITAL_ACCEPTED",
+                "CREATED", "SEARCHING_HOSPITAL", "DETECTED", "PENDING_HOSPITAL_ACCEPTANCE", "HOSPITAL_ASSIGNED", "ACCEPTED", "HOSPITAL_ACCEPTED",
                 "DOCTOR_ASSIGNED", "FAMILY_NOTIFIED", "AMBULANCE_REQUESTED", "AMBULANCE_ACCEPTED",
                 "AMBULANCE_DISPATCHED", "EN_ROUTE_TO_PATIENT", "ARRIVED_AT_PATIENT", "PATIENT_PICKED_UP",
-                "EN_ROUTE_TO_HOSPITAL", "ARRIVED_AT_HOSPITAL", "AMBULANCE_NOT_REQUIRED"
-        ));
+                "EN_ROUTE_TO_HOSPITAL", "ARRIVED_AT_HOSPITAL", "AMBULANCE_NOT_REQUIRED", "NEXT_HOSPITAL_REQUESTED",
+                "PENDING_DRIVER_ACCEPTANCE", "DRIVER_ACCEPTED", "JOURNEY_STARTED", "ARRIVED_AT_PICKUP", "PATIENT_ONBOARD"
+        )).stream()
+                .filter(e -> !Boolean.TRUE.equals(e.getCancelled())
+                        && !"RESOLVED".equalsIgnoreCase(e.getStatus())
+                        && !"COMPLETED".equalsIgnoreCase(e.getStatus())
+                        && !"CANCELLED".equalsIgnoreCase(e.getStatus()))
+                .sorted((a, b) -> {
+                    if (a.getCreatedAt() == null || b.getCreatedAt() == null) return 0;
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                })
+                .toList();
 
         // Filter based on role
         List<EmergencyRequest> filtered;
@@ -392,7 +559,29 @@ public class EmergencyController {
             return ResponseEntity.notFound().build();
         }
         return ambulanceRepository.findById(request.getAmbulanceId())
-                .map(ResponseEntity::ok)
+                .map(amb -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", amb.getId());
+                    map.put("unitId", amb.getUnitId());
+                    map.put("status", amb.getStatus());
+                    map.put("latitude", amb.getLatitude());
+                    map.put("longitude", amb.getLongitude());
+                    map.put("hospitalName", amb.getHospitalName());
+                    map.put("currentEmergencyId", amb.getCurrentEmergencyId());
+                    map.put("vehicleType", "Type-D Advanced Cardiac Life Support (ACLS)");
+                    map.put("vehicleRegistration", "KA-01-EQ-" + (1000 + (amb.getId() != null ? (amb.getId() * 117) % 9000 : 9042)));
+                    map.put("equipment", List.of("12-Lead ECG Monitor", "Defibrillator", "Portable Ventilator", "Emergency Resuscitation Kit"));
+                    if (amb.getDriver() != null) {
+                        map.put("driverName", amb.getDriver().getFullName());
+                        map.put("driverPhone", amb.getDriver().getDoctorPhone() != null ? amb.getDriver().getDoctorPhone() : "9876543210");
+                        map.put("driverRating", 4.9);
+                    } else {
+                        map.put("driverName", "Officer Rajiv");
+                        map.put("driverPhone", "9876543210");
+                        map.put("driverRating", 4.9);
+                    }
+                    return ResponseEntity.ok(map);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -644,11 +833,23 @@ public class EmergencyController {
 
         // Enrich with patient info
         userRepository.findByUid(request.getPatientUid()).ifPresent(p -> {
+            String contactPhone = p.getDoctorPhone() != null ? p.getDoctorPhone() : p.getPhone();
             enriched.put("patientName", p.getFullName());
             enriched.put("patientAge", p.getAge());
             enriched.put("patientBloodGroup", p.getBloodGroup());
-            enriched.put("patientPhone", p.getDoctorPhone());
+            enriched.put("patientPhone", contactPhone);
             enriched.put("patientAddress", p.getAddress());
+            enriched.put("patientEmergencyContact", contactPhone);
+
+            Map<String, Object> patientMap = new HashMap<>();
+            patientMap.put("fullName", p.getFullName());
+            patientMap.put("uid", p.getUid());
+            patientMap.put("age", p.getAge());
+            patientMap.put("bloodGroup", p.getBloodGroup());
+            patientMap.put("phone", contactPhone);
+            patientMap.put("emergencyContact", contactPhone);
+            patientMap.put("address", p.getAddress());
+            enriched.put("patient", patientMap);
         });
 
         return enriched;

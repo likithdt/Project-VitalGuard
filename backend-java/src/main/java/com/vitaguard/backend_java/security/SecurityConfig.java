@@ -46,7 +46,7 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/setup-password").permitAll()
                         .requestMatchers("/ws/**", "/ws-triage/**").permitAll() // WebSocket brokers
-                        .requestMatchers("/").permitAll() // API root status
+                        .requestMatchers("/", "/error").permitAll() // API root status & error dispatcher
                         // System Administration Portal endpoints - STRICT BACKEND SECURITY
                         .requestMatchers("/api/admin/**").hasAnyRole("SYSTEM_ADMIN", "ADMIN")
                         // Any other request must be authenticated

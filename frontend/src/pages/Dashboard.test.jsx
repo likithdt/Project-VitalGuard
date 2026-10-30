@@ -11,6 +11,15 @@ const session = vi.hoisted(() => ({ user: { uid: 'patient-1', role: 'PATIENT', f
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: session.user, logout: vi.fn() }) }));
 vi.mock('../services/websocket', () => ({
   useRealtimeRefresh: () => ({ connected: true, revision: 0, refresh: vi.fn(), tracking: null }),
+  useAmbulanceLocationSender: () => ({
+    isTracking: false,
+    gpsStatus: 'ACTIVE',
+    gpsError: null,
+    lastGpsTimestamp: new Date(),
+    currentCoords: { latitude: 12.965, longitude: 77.585 },
+    startTracking: vi.fn(),
+    stopTracking: vi.fn()
+  })
 }));
 vi.mock('../components/MapComponent', () => ({ default: () => <div>Map</div> }));
 
@@ -93,5 +102,90 @@ describe('queue response regression', () => {
     expect(screen.getByText('Spouse')).toBeTruthy();
     expect(screen.getByText('PRIMARY CONTACT')).toBeTruthy();
     expect(screen.getByText('Live Telemetry Overview: John Doe')).toBeTruthy();
+  });
+
+  it('renders incoming ambulance request and allows driver to accept and reject dispatch', async () => {
+    session.user = { uid: 'AMB_01', role: 'AMBULANCE_DRIVER', fullName: 'Ambulance Driver', ambulanceId: 1, ambulanceUnitId: 'AMB-01' };
+
+    let currentJob = { ambulance: { id: 1, unitId: 'AMB-01', status: 'AVAILABLE' }, emergency: null };
+    let pendingRequests = [
+      {
+        id: 102,
+        requestId: 102,
+        emergencyId: 207,
+        status: 'PENDING',
+        distanceKm: 8.2,
+        etaMinutes: 13,
+        patientName: 'Lokesh T',
+        patientAge: 42,
+        patientBloodGroup: 'A+',
+        patientPhone: '9876543210',
+        destinationHospital: 'Apollo Hospital',
+        pickupAddress: 'Bangalore City Center',
+        symptoms: 'Severe Chest Pain',
+        symptomDescription: 'Acute myocardial infarction signs',
+        riskScore: 92
+      }
+    ];
+
+    vi.spyOn(API, 'get').mockImplementation(async path => {
+      if (path === '/ambulance/current-job') {
+        return { status: 200, data: currentJob };
+      }
+      if (path === '/ambulance/pending-requests') {
+        return { status: 200, data: pendingRequests };
+      }
+      return { status: 200, data: [] };
+    });
+
+    const postSpy = vi.spyOn(API, 'post').mockImplementation(async (path) => {
+      if (path === '/ambulance/requests/102/accept') {
+        currentJob = {
+          ambulance: { id: 1, unitId: 'AMB-01', status: 'ACCEPTED', currentEmergencyId: 207 },
+          emergency: {
+            id: 207,
+            emergencyId: 207,
+            patientName: 'Lokesh T',
+            hospitalName: 'Apollo Hospital',
+            destinationHospital: 'Apollo Hospital',
+            status: 'ACCEPTED',
+            severity: 'CRITICAL',
+            latitude: 12.9863,
+            longitude: 77.7175,
+            hospitalLat: 12.9252,
+            hospitalLng: 77.6011
+          }
+        };
+        pendingRequests = [];
+        return { status: 200, data: { success: true, status: 'DRIVER_ACCEPTED' } };
+      }
+      if (path === '/ambulance/requests/102/decline') {
+        pendingRequests = [];
+        return { status: 200, data: { success: true, status: 'DECLINED' } };
+      }
+      return { status: 200, data: { success: true } };
+    });
+
+    render(<HealthcareDashboard />);
+
+    // Verify incoming dispatch card renders with real distance & ETA
+    expect(await screen.findByText(/Emergency ID: SOS-207/)).toBeTruthy();
+    expect(screen.getByText('Lokesh T')).toBeTruthy();
+    expect(screen.getByText(/Apollo Hospital/)).toBeTruthy();
+    expect(screen.getByText(/8.2 km/)).toBeTruthy();
+    expect(screen.getByText(/~13 min response time/)).toBeTruthy();
+
+    // Verify Accept Request button exists and click it
+    const acceptBtn = screen.getByTestId('accept-request-btn');
+    expect(acceptBtn).toBeTruthy();
+    fireEvent.click(acceptBtn);
+
+    // Verify API called with request ID 102
+    expect(postSpy).toHaveBeenCalledWith('/ambulance/requests/102/accept');
+
+    // Verify UI transitions to active emergency dispatch
+    expect(await screen.findByText(/ACTIVE EMERGENCY DISPATCH: SOS-207/)).toBeTruthy();
+    expect(screen.getAllByText(/Apollo Hospital/).length).toBeGreaterThan(0);
+    expect(screen.getByText('🚑 Start Journey (En Route)')).toBeTruthy();
   });
 });

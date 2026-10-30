@@ -15,9 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -165,29 +168,57 @@ public class AmbulanceService {
         
         // Also send to ambulance topic
         messagingTemplate.convertAndSend("/topic/ambulance/" + request.getAmbulanceId(), wsPayload);
+
+        // Broadcast to general ambulance requests topic
+        messagingTemplate.convertAndSend("/topic/ambulance/requests", wsPayload);
     }
 
     @Transactional
     public synchronized boolean acceptRequest(Long requestId, Long driverId) {
-        AmbulanceRequest request = requestRepository.findById(requestId).orElse(null);
+        if (requestId == null || driverId == null) {
+            return false;
+        }
+
+        AmbulanceRequest request = requestRepository.findByIdForUpdate(requestId)
+                .or(() -> requestRepository.findById(requestId))
+                .orElse(null);
         if (request == null) {
             return false;
         }
 
         // Check if already accepted or declined
-        if (!"PENDING".equals(request.getStatus())) {
+        if (!"PENDING".equalsIgnoreCase(request.getStatus())) {
             return false;
         }
 
-        // Verify driver owns the ambulance
-        Ambulance ambulance = ambulanceRepository.findById(request.getAmbulanceId()).orElse(null);
-        User driver = userRepository.findById(driverId).orElse(null);
-        boolean isAuthorizedDriver = ambulance != null && (
-                (ambulance.getDriver() != null && ambulance.getDriver().getId().equals(driverId))
-                || (driver != null && ambulance.getId().equals(driver.getAmbulanceId()))
-        );
-        if (!isAuthorizedDriver) {
+        // Verify driver has an ambulance
+        User driver = userRepository != null ? userRepository.findById(driverId).orElse(null) : null;
+
+        Ambulance ambulance = ambulanceRepository.findByDriverId(driverId).orElse(null);
+        if (ambulance == null && driver != null && driver.getAmbulanceId() != null) {
+            ambulance = ambulanceRepository.findById(driver.getAmbulanceId()).orElse(null);
+        }
+        if (ambulance == null) {
+            ambulance = ambulanceRepository.findById(request.getAmbulanceId()).orElse(null);
+        }
+        if (ambulance == null) {
             return false;
+        }
+
+        // Check if the ambulance belongs to another driver
+        if (ambulance.getDriver() != null && !driverId.equals(ambulance.getDriver().getId())) {
+            return false;
+        }
+
+        // Check if caller's ambulance is already busy with another active emergency
+        if (ambulance.getCurrentEmergencyId() != null && !ambulance.getCurrentEmergencyId().equals(request.getEmergencyId())) {
+            Optional<EmergencyRequest> activeEr = emergencyRepository.findById(ambulance.getCurrentEmergencyId());
+            if (activeEr.isPresent() && !Boolean.TRUE.equals(activeEr.get().getCancelled())
+                    && !"RESOLVED".equalsIgnoreCase(activeEr.get().getStatus())
+                    && !"CANCELLED".equalsIgnoreCase(activeEr.get().getStatus())
+                    && !"COMPLETED".equalsIgnoreCase(activeEr.get().getStatus())) {
+                return false;
+            }
         }
 
         // Check if another request for this emergency was already accepted
@@ -201,21 +232,52 @@ public class AmbulanceService {
             return false;
         }
 
+        // If this request was initially assigned to a different ambulance, free the previous ambulance
+        if (!request.getAmbulanceId().equals(ambulance.getId())) {
+            ambulanceRepository.findById(request.getAmbulanceId()).ifPresent(prevAmb -> {
+                if ("REQUESTED".equalsIgnoreCase(prevAmb.getStatus()) && request.getEmergencyId().equals(prevAmb.getCurrentEmergencyId())) {
+                    prevAmb.setStatus("AVAILABLE");
+                    prevAmb.setCurrentEmergencyId(null);
+                    ambulanceRepository.save(prevAmb);
+                }
+            });
+            request.setAmbulanceId(ambulance.getId());
+        }
+
         // Accept the request
         request.setStatus("ACCEPTED");
         request.setRespondedAt(LocalDateTime.now());
         requestRepository.save(request);
 
+        // Cancel any other pending requests for this same emergency to prevent duplicate acceptance
+        List<AmbulanceRequest> otherPendingRequests = requestRepository.findByEmergencyIdAndStatusIn(request.getEmergencyId(),
+                List.of("PENDING"));
+        if (otherPendingRequests != null) {
+            for (AmbulanceRequest otherReq : otherPendingRequests) {
+                if (!otherReq.getId().equals(requestId)) {
+                    otherReq.setStatus("DECLINED");
+                    otherReq.setRespondedAt(LocalDateTime.now());
+                    requestRepository.save(otherReq);
+                }
+            }
+        }
+
         // Update ambulance status
         ambulance.setStatus("ACCEPTED");
         ambulance.setCurrentEmergencyId(request.getEmergencyId());
+        if (ambulance.getDriver() == null && driver != null) {
+            ambulance.setDriver(driver);
+        }
         ambulanceRepository.save(ambulance);
 
         // Update emergency
-        EmergencyRequest emergency = emergencyRepository.findById(request.getEmergencyId()).orElse(null);
+        EmergencyRequest emergency = emergencyRepository.findByIdForUpdate(request.getEmergencyId())
+                .or(() -> emergencyRepository.findById(request.getEmergencyId()))
+                .orElse(null);
         if (emergency != null) {
             emergency.setAmbulanceId(ambulance.getId());
             emergency.setAmbulanceDispatched(true);
+            emergency.setStatus("AMBULANCE_ACCEPTED");
             emergencyRepository.save(emergency);
             
             // Call workflow service to handle status update
@@ -223,29 +285,32 @@ public class AmbulanceService {
         }
 
         // Notify all parties
-        notifyAmbulanceAccepted(request, ambulance, emergency);
+        notifyAmbulanceAccepted(request, ambulance, emergency, driver);
+
+        // Broadcast to general ambulance requests topic for UI updates
+        Map<String, Object> wsPayload = new HashMap<>();
+        wsPayload.put("requestId", requestId);
+        wsPayload.put("status", "ACCEPTED");
+        wsPayload.put("ambulanceStatus", "DRIVER_ACCEPTED");
+        wsPayload.put("emergencyId", request.getEmergencyId());
+        wsPayload.put("ambulanceId", ambulance.getId());
+        wsPayload.put("ambulanceUnitId", ambulance.getUnitId() != null ? ambulance.getUnitId() : "AMB-01");
+        wsPayload.put("driverName", driver != null ? driver.getFullName() : (ambulance.getDriver() != null ? ambulance.getDriver().getFullName() : "Active Operator"));
+        messagingTemplate.convertAndSend("/topic/ambulance/requests", (Object) wsPayload);
 
         return true;
     }
 
     @Transactional
     public synchronized boolean declineRequest(Long requestId, Long driverId) {
-        AmbulanceRequest request = requestRepository.findById(requestId).orElse(null);
+        AmbulanceRequest request = requestRepository.findByIdForUpdate(requestId)
+                .or(() -> requestRepository.findById(requestId))
+                .orElse(null);
         if (request == null) {
             return false;
         }
 
-        if (!"PENDING".equals(request.getStatus())) {
-            return false;
-        }
-
-        Ambulance ambulance = ambulanceRepository.findById(request.getAmbulanceId()).orElse(null);
-        User driver = userRepository.findById(driverId).orElse(null);
-        boolean isAuthorizedDriver = ambulance != null && (
-                (ambulance.getDriver() != null && ambulance.getDriver().getId().equals(driverId))
-                || (driver != null && ambulance.getId().equals(driver.getAmbulanceId()))
-        );
-        if (!isAuthorizedDriver) {
+        if (!"PENDING".equalsIgnoreCase(request.getStatus())) {
             return false;
         }
 
@@ -253,16 +318,28 @@ public class AmbulanceService {
         request.setRespondedAt(LocalDateTime.now());
         requestRepository.save(request);
 
-        // Return ambulance to AVAILABLE
-        ambulance.setStatus("AVAILABLE");
-        ambulance.setCurrentEmergencyId(null);
-        ambulanceRepository.save(ambulance);
+        // Return ambulance to AVAILABLE if it was REQUESTED
+        ambulanceRepository.findById(request.getAmbulanceId()).ifPresent(amb -> {
+            if ("REQUESTED".equalsIgnoreCase(amb.getStatus()) && request.getEmergencyId().equals(amb.getCurrentEmergencyId())) {
+                amb.setStatus("AVAILABLE");
+                amb.setCurrentEmergencyId(null);
+                ambulanceRepository.save(amb);
+            }
+        });
 
-        // Request next nearest ambulance
+        // Request next nearest ambulance while keeping the emergency active
         EmergencyRequest emergency = emergencyRepository.findById(request.getEmergencyId()).orElse(null);
-        if (emergency != null) {
+        if (emergency != null && !Boolean.TRUE.equals(emergency.getCancelled())
+                && !"RESOLVED".equalsIgnoreCase(emergency.getStatus())
+                && !"CANCELLED".equalsIgnoreCase(emergency.getStatus())) {
             requestNextNearestAmbulance(emergency);
         }
+
+        messagingTemplate.convertAndSend("/topic/ambulance/requests", (Object) Map.of(
+            "requestId", requestId,
+            "status", "DECLINED",
+            "emergencyId", request.getEmergencyId()
+        ));
 
         return true;
     }
@@ -305,22 +382,34 @@ public class AmbulanceService {
     }
 
     private void notifyAmbulanceAccepted(AmbulanceRequest request, Ambulance ambulance, EmergencyRequest emergency) {
+        notifyAmbulanceAccepted(request, ambulance, emergency, null);
+    }
+
+    private void notifyAmbulanceAccepted(AmbulanceRequest request, Ambulance ambulance, EmergencyRequest emergency, User driver) {
+        if (emergency == null || ambulance == null) return;
         Map<String, Object> payload = new java.util.HashMap<>();
         payload.put("emergencyId", emergency.getId());
         payload.put("ambulanceId", ambulance.getId());
         payload.put("ambulanceUnitId", ambulance.getUnitId());
-        payload.put("driverName", ambulance.getDriver() != null ? ambulance.getDriver().getFullName() : "Unknown");
+        payload.put("driverName", driver != null ? driver.getFullName() : (ambulance.getDriver() != null ? ambulance.getDriver().getFullName() : "Active Operator"));
+        payload.put("driverPhone", driver != null ? (driver.getPhone() != null ? driver.getPhone() : driver.getDoctorPhone()) : "");
         payload.put("status", "AMBULANCE_ACCEPTED");
-        payload.put("distanceKm", request.getDistanceKm());
-        payload.put("etaMinutes", request.getEtaMinutes());
+        payload.put("ambulanceStatus", "DRIVER_ACCEPTED");
+        payload.put("distanceKm", request != null ? request.getDistanceKm() : null);
+        payload.put("etaMinutes", request != null ? request.getEtaMinutes() : null);
+        payload.put("patientUid", emergency.getPatientUid());
+        payload.put("hospitalId", emergency.getHospitalId());
 
         Object wsPayload = payload;
 
         // Broadcast to patient, family, hospital, doctor
         messagingTemplate.convertAndSend("/topic/emergency/" + emergency.getId(), wsPayload);
+        messagingTemplate.convertAndSend("/topic/emergency-updates", wsPayload);
         messagingTemplate.convertAndSend("/topic/ambulance/" + ambulance.getId(), wsPayload);
+        messagingTemplate.convertAndSend("/topic/ambulance/requests", wsPayload);
         if (emergency.getHospitalId() != null) {
             messagingTemplate.convertAndSend("/topic/hospital/" + emergency.getHospitalId() + "/emergencies", wsPayload);
+            messagingTemplate.convertAndSend("/topic/hospital/assignments", wsPayload);
         }
         if (emergency.getDoctorId() != null && emergency.getDoctorId() > 0) {
             messagingTemplate.convertAndSend("/topic/doctor/" + emergency.getDoctorId() + "/emergencies", wsPayload);
@@ -375,12 +464,15 @@ public class AmbulanceService {
                 // Update emergency status based on ambulance status
                 switch (status) {
                     case "EN_ROUTE_TO_PATIENT":
+                    case "JOURNEY_STARTED":
                         emergencyWorkflowService.onAmbulanceEnRoute(emergency);
                         break;
                     case "ARRIVED_AT_PATIENT":
+                    case "ARRIVED_AT_PICKUP":
                         emergencyWorkflowService.onArrivedAtPatient(emergency);
                         break;
                     case "PATIENT_PICKED_UP":
+                    case "PATIENT_ONBOARD":
                         emergencyWorkflowService.onPatientPickedUp(emergency);
                         break;
                     case "EN_ROUTE_TO_HOSPITAL":
@@ -438,7 +530,53 @@ public class AmbulanceService {
             }
         }
         if (ambulance == null) return List.of();
-        return requestRepository.findByAmbulanceIdAndStatusIn(ambulance.getId(), List.of("PENDING"));
+
+        // Stale job cleanup: if ambulance has currentEmergencyId that is older than 2 hours or completed/cancelled/resolved
+        if (ambulance.getCurrentEmergencyId() != null) {
+            Optional<EmergencyRequest> curEr = emergencyRepository.findById(ambulance.getCurrentEmergencyId());
+            if (curEr.isEmpty()
+                    || Boolean.TRUE.equals(curEr.get().getCancelled())
+                    || "RESOLVED".equals(curEr.get().getStatus())
+                    || "CANCELLED".equals(curEr.get().getStatus())
+                    || "COMPLETED".equals(curEr.get().getStatus())) {
+                ambulance.setCurrentEmergencyId(null);
+                if (!"REQUESTED".equals(ambulance.getStatus())) {
+                    ambulance.setStatus("AVAILABLE");
+                }
+                ambulanceRepository.save(ambulance);
+            }
+        }
+
+        // 1. Direct requests targeted to this ambulance
+        List<AmbulanceRequest> direct = requestRepository.findByAmbulanceIdAndStatusIn(ambulance.getId(), List.of("PENDING"));
+
+        // 2. All pending requests in the system for active emergencies
+        List<AmbulanceRequest> allPending = requestRepository.findByStatusIn(List.of("PENDING"));
+
+        List<AmbulanceRequest> resultList = new ArrayList<>(direct);
+        Set<Long> seenIds = new HashSet<>();
+        for (AmbulanceRequest ar : direct) {
+            if (ar.getId() != null) seenIds.add(ar.getId());
+        }
+
+        // Show all active pending requests for fresh emergencies (< 2h old)
+        if (allPending != null) {
+            for (AmbulanceRequest ar : allPending) {
+                if (ar.getId() != null && seenIds.contains(ar.getId())) continue;
+                Optional<EmergencyRequest> er = emergencyRepository.findById(ar.getEmergencyId());
+                if (er.isPresent() && !Boolean.TRUE.equals(er.get().getCancelled())
+                        && !"RESOLVED".equals(er.get().getStatus())
+                        && !"CANCELLED".equals(er.get().getStatus())
+                        && !"AMBULANCE_NOT_REQUIRED".equals(er.get().getStatus())
+                        && !"AMBULANCE_ACCEPTED".equals(er.get().getStatus())
+                        && er.get().getAmbulanceId() == null
+                        && (er.get().getCreatedAt() == null || er.get().getCreatedAt().isAfter(LocalDateTime.now().minusHours(24)))) {
+                    resultList.add(ar);
+                    if (ar.getId() != null) seenIds.add(ar.getId());
+                }
+            }
+        }
+        return resultList;
     }
 
     private String getPatientName(String patientUid) {

@@ -13,6 +13,9 @@ public class EmergencyRequest {
 
     @Column(nullable = false)
     private String patientUid; // User's uid (e.g. LKT01)
+    private String guardianUid; // Guardian/Family member uid if requested on behalf
+    private String pickupAddress; // Textual pickup location address
+    private String emergencyType; // e.g. Cardiac, Trauma, Respiratory, Emergency
 
     private Double latitude;
     private Double longitude;
@@ -39,7 +42,8 @@ public class EmergencyRequest {
     private Boolean cancelled = false;
     private Boolean smsSent = false;
     private Boolean ambulanceDispatched = false;
-    private Boolean requiresAmbulance = true;
+    private Boolean requiresAmbulance = null;
+    private String ambulanceDecision = "PENDING"; // PENDING, REQUIRED, NOT_REQUIRED
 
     private Integer riskScore;
     private String severity;
@@ -113,7 +117,28 @@ public class EmergencyRequest {
     public void setAmbulanceDispatched(Boolean ambulanceDispatched) { this.ambulanceDispatched = ambulanceDispatched; }
 
     public Boolean getRequiresAmbulance() { return requiresAmbulance; }
-    public void setRequiresAmbulance(Boolean requiresAmbulance) { this.requiresAmbulance = requiresAmbulance; }
+    public void setRequiresAmbulance(Boolean requiresAmbulance) {
+        this.requiresAmbulance = requiresAmbulance;
+        if (Boolean.TRUE.equals(requiresAmbulance)) {
+            this.ambulanceDecision = "REQUIRED";
+        } else if (Boolean.FALSE.equals(requiresAmbulance)) {
+            this.ambulanceDecision = "NOT_REQUIRED";
+        } else {
+            this.ambulanceDecision = "PENDING";
+        }
+    }
+
+    public String getAmbulanceDecision() { return ambulanceDecision; }
+    public void setAmbulanceDecision(String ambulanceDecision) {
+        this.ambulanceDecision = ambulanceDecision;
+        if ("REQUIRED".equalsIgnoreCase(ambulanceDecision)) {
+            this.requiresAmbulance = true;
+        } else if ("NOT_REQUIRED".equalsIgnoreCase(ambulanceDecision)) {
+            this.requiresAmbulance = false;
+        } else {
+            this.requiresAmbulance = null;
+        }
+    }
 
     public Integer getRiskScore() { return riskScore; }
     public void setRiskScore(Integer riskScore) { this.riskScore = riskScore; }
@@ -123,4 +148,13 @@ public class EmergencyRequest {
 
     public String getDetectedVitals() { return detectedVitals; }
     public void setDetectedVitals(String detectedVitals) { this.detectedVitals = detectedVitals; }
+
+    public String getGuardianUid() { return guardianUid; }
+    public void setGuardianUid(String guardianUid) { this.guardianUid = guardianUid; }
+
+    public String getPickupAddress() { return pickupAddress; }
+    public void setPickupAddress(String pickupAddress) { this.pickupAddress = pickupAddress; }
+
+    public String getEmergencyType() { return emergencyType; }
+    public void setEmergencyType(String emergencyType) { this.emergencyType = emergencyType; }
 }

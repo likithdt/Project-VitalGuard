@@ -35,6 +35,13 @@ public class EmergencyService {
     private final com.vitaguard.backend_java.ambulance.AmbulanceService ambulanceService;
     private final RestTemplate restTemplate = new RestTemplate();
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private EmergencyWorkflowService workflowService;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.vitaguard.backend_java.hospital.HospitalAssignmentRepository hospitalAssignmentRepository;
+
     public EmergencyService(
             EmergencyRequestRepository emergencyRepository,
             EmergencyEventRepository eventRepository,
@@ -95,26 +102,35 @@ public class EmergencyService {
         logEvent(request.getId(), "DETECTED", "Emergency request created by patient");
         broadcastWorkflowUpdate(request, "DETECTED");
 
-        // 3. Assign Hospital
+        // 3. Assign Hospital (Pending Acceptance)
         if (matchedHospital != null) {
-            request.setStatus("HOSPITAL_ASSIGNED");
+            request.setStatus("PENDING_HOSPITAL_ACCEPTANCE");
             emergencyRepository.save(request);
-            
-            // Consume hospital capacity
-            matchedHospital.setAvailableBeds(Math.max(0, matchedHospital.getAvailableBeds() - 1));
-            hospitalRepository.save(matchedHospital);
-            
-            logEvent(request.getId(), "HOSPITAL_ASSIGNED", "Hospital assigned: " + matchedHospital.getName());
-            broadcastWorkflowUpdate(request, "HOSPITAL_ASSIGNED");
+
+            if (hospitalAssignmentRepository != null) {
+                com.vitaguard.backend_java.hospital.HospitalAssignment assignment =
+                        new com.vitaguard.backend_java.hospital.HospitalAssignment(request.getId(), matchedHospital.getId());
+                hospitalAssignmentRepository.save(assignment);
+            }
+
+            logEvent(request.getId(), "PENDING_HOSPITAL_ACCEPTANCE", "Hospital assignment requested: " + matchedHospital.getName());
+            broadcastWorkflowUpdate(request, "PENDING_HOSPITAL_ACCEPTANCE");
         } else {
-            logEvent(request.getId(), "HOSPITAL_ASSIGNED", "No suitable hospital found");
-            broadcastWorkflowUpdate(request, "HOSPITAL_ASSIGNED");
+            request.setStatus("SEARCHING_HOSPITAL");
+            emergencyRepository.save(request);
+            logEvent(request.getId(), "SEARCHING_HOSPITAL", "No suitable hospital found");
+            broadcastWorkflowUpdate(request, "SEARCHING_HOSPITAL");
         }
 
+        // NO automatic ambulance dispatch! Ambulance decision requires doctor assessment.
         return request;
     }
 
     public EmergencyRequest acceptEmergency(Long sosId, Long hospitalId) {
+        if (workflowService != null) {
+            return workflowService.acceptHospitalEmergency(sosId, hospitalId);
+        }
+
         EmergencyRequest request = emergencyRepository.findById(sosId)
                 .orElseThrow(() -> new IllegalArgumentException("SOS event not found"));
 
@@ -124,13 +140,37 @@ public class EmergencyService {
         }
 
         // Verify status is still pending acceptance
-        if (!"HOSPITAL_ASSIGNED".equals(request.getStatus())) {
-            throw new IllegalArgumentException("Emergency is no longer pending acceptance. Current status: " + request.getStatus());
+        boolean isPendingStatus = "HOSPITAL_ASSIGNED".equals(request.getStatus())
+                || "PENDING_HOSPITAL_ACCEPTANCE".equals(request.getStatus())
+                || "NEXT_HOSPITAL_REQUESTED".equals(request.getStatus())
+                || "DETECTED".equals(request.getStatus());
+
+        if (!isPendingStatus) {
+            throw new IllegalStateException("Emergency is no longer pending acceptance. Current status: " + request.getStatus());
+        }
+
+        if (hospitalAssignmentRepository != null) {
+            Optional<com.vitaguard.backend_java.hospital.HospitalAssignment> pendingOpt = hospitalAssignmentRepository.findPendingByEmergencyId(sosId);
+            if (pendingOpt.isPresent()) {
+                com.vitaguard.backend_java.hospital.HospitalAssignment ha = pendingOpt.get();
+                if (!ha.getHospitalId().equals(hospitalId)) {
+                    throw new IllegalStateException("Assignment belongs to another hospital.");
+                }
+                ha.setStatus("ACCEPTED");
+                ha.setRespondedAt(LocalDateTime.now());
+                hospitalAssignmentRepository.save(ha);
+            }
         }
 
         request.setStatus("HOSPITAL_ACCEPTED");
         request.setAcceptedAt(LocalDateTime.now());
         emergencyRepository.save(request);
+
+        // Consume hospital capacity
+        hospitalRepository.findById(hospitalId).ifPresent(h -> {
+            h.setAvailableBeds(Math.max(0, h.getAvailableBeds() - 1));
+            hospitalRepository.save(h);
+        });
 
         // Log timeline event
         logEvent(request.getId(), "HOSPITAL_ACCEPTED", "Hospital accepted the emergency request");
@@ -138,18 +178,28 @@ public class EmergencyService {
         // Assign Doctor
         assignDoctor(request);
 
-        // Assign Ambulance if required
-        if (Boolean.TRUE.equals(request.getRequiresAmbulance())) {
-            assignAmbulance(request);
-        } else {
-            request.setStatus("AMBULANCE_NOT_REQUIRED");
-            emergencyRepository.save(request);
-            logEvent(request.getId(), "AMBULANCE_NOT_REQUIRED", "Ambulance not required for this emergency");
-        }
-
         // Broadcast to all relevant topics
         broadcastWorkflowUpdate(request, "HOSPITAL_ACCEPTED");
 
+        return request;
+    }
+
+    public EmergencyRequest rejectEmergency(Long sosId, Long hospitalId, String reason) {
+        if (workflowService != null) {
+            return workflowService.rejectHospitalEmergency(sosId, hospitalId, reason);
+        }
+
+        EmergencyRequest request = emergencyRepository.findById(sosId)
+                .orElseThrow(() -> new IllegalArgumentException("SOS event not found"));
+
+        if (!hospitalId.equals(request.getHospitalId())) {
+            throw new IllegalArgumentException("Emergency does not belong to this hospital");
+        }
+
+        request.setStatus("HOSPITAL_REJECTED");
+        emergencyRepository.save(request);
+        logEvent(request.getId(), "HOSPITAL_REJECTED", "Hospital rejected emergency request. Reason: " + reason);
+        broadcastWorkflowUpdate(request, "HOSPITAL_REJECTED");
         return request;
     }
 
@@ -289,6 +339,9 @@ public class EmergencyService {
     }
 
     private void assignAmbulance(EmergencyRequest request) {
+        if (request.getAmbulanceId() != null && Boolean.TRUE.equals(request.getAmbulanceDispatched())) {
+            return;
+        }
         // Log AMBULANCE_REQUESTED
         request.setStatus("AMBULANCE_REQUESTED");
         emergencyRepository.save(request);

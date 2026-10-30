@@ -10,12 +10,13 @@ import EmergencyTimeline from '../components/EmergencyTimeline';
 import EmergencyAlert from '../components/EmergencyAlert';
 import StatusBadge from '../components/StatusBadge';
 import GoogleMapTracking from '../components/GoogleMapTracking';
+import UberJourneyStepper from '../components/UberJourneyStepper';
 import ConfirmModal from '../components/ConfirmModal';
 import { EmptyState, LoadingState } from '../components/StateComponents';
 
 const getWorkflowAmbulanceStatus = (sos, tracking) => {
   if (!sos) return 'Standby';
-  if (sos.requiresAmbulance === false || sos.status === 'AMBULANCE_NOT_REQUIRED') {
+  if (sos.requiresAmbulance === false || sos.status === 'AMBULANCE_NOT_REQUIRED' || sos.ambulanceDecision === 'NOT_REQUIRED') {
     return 'Not Required';
   }
   if (tracking?.status) {
@@ -30,19 +31,33 @@ const getWorkflowAmbulanceStatus = (sos, tracking) => {
     case 'DETECTED':
       return 'Searching Hospital';
     case 'HOSPITAL_ASSIGNED':
+    case 'PENDING_HOSPITAL_ACCEPTANCE':
       return 'Awaiting Hospital Acceptance';
+    case 'HOSPITAL_REJECTED':
+      return 'Hospital Rejected - Re-routing';
+    case 'NEXT_HOSPITAL_REQUESTED':
+      return 'Contacting Next Hospital';
     case 'HOSPITAL_ACCEPTED':
-      return 'Hospital Accepted - Assigning';
+      return 'Hospital Accepted - Doctor Assigned';
+    case 'DOCTOR_ASSIGNED':
+      return 'Doctor Assigned - Assessing Ambulance';
+    case 'AMBULANCE_NOT_REQUIRED':
+      return 'Ambulance Not Required';
     case 'AMBULANCE_REQUESTED':
+    case 'PENDING_DRIVER_ACCEPTANCE':
       return 'Request Sent to Driver';
     case 'AMBULANCE_ACCEPTED':
+    case 'DRIVER_ACCEPTED':
       return 'Driver Accepted - Preparing Dispatch';
     case 'AMBULANCE_DISPATCHED':
+    case 'JOURNEY_STARTED':
     case 'EN_ROUTE_TO_PATIENT':
       return 'En Route to Patient';
     case 'ARRIVED_AT_PATIENT':
+    case 'ARRIVED_AT_PICKUP':
       return 'Arrived at Patient';
     case 'PATIENT_PICKED_UP':
+    case 'PATIENT_ONBOARD':
       return 'Patient Picked Up';
     case 'EN_ROUTE_TO_HOSPITAL':
       return 'En Route to Hospital';
@@ -77,7 +92,7 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
   };
 
   // WebSocket real-time subscription for family member & selected patient
-  const { connected: wsConnected, revision, refresh, tracking: trackingData } = useRealtimeRefresh(
+  const { connected: wsConnected, revision, refresh, tracking: trackingData, ambulanceLocation: liveAmbulanceLoc } = useRealtimeRefresh(
     user?.uid,
     trackedEmergencyId,
     selectedPatientUid || user?.uid,
@@ -111,9 +126,11 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
     setTrackedEmergencyId(activeId);
   }
 
-  // Assigned Hospital & Doctor for active SOS
+  // Assigned Hospital, Doctor, & Ambulance for active SOS
   const { data: assignedHospital } = useApiResource(activeId != null ? `/emergencies/${activeId}/hospital` : null, revision);
   const { data: assignedDoctor } = useApiResource(activeId != null ? `/emergencies/${activeId}/doctor` : null, revision);
+  const { data: assignedAmbulance } = useApiResource(activeId != null ? `/emergency/${activeId}/ambulance` : null, revision);
+  const { data: hospitalList } = useApiResource('/hospital', revision);
 
   // Emergency history for selected patient
   const { data: patientHistoryData } = useApiResource(
@@ -142,11 +159,20 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
     return () => { cancelled = true; };
   }, [selectedPatient?.uid, revision]);
 
-  // Confirmation modal for family member initiating emergency on patient's behalf
+  // Emergency request modal for family guardian requesting ambulance
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [symptomList, setSymptomList] = useState(['Chest Pain']);
   const [symptomDesc, setSymptomDesc] = useState('');
+  const [emergencyType, setEmergencyType] = useState('Cardiac');
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [selectedHospitalId, setSelectedHospitalId] = useState('');
   const [isDispatching, setIsDispatching] = useState(false);
+
+  useEffect(() => {
+    if (selectedPatient?.address && !pickupAddress) {
+      setPickupAddress(selectedPatient.address);
+    }
+  }, [selectedPatient, pickupAddress]);
 
   const handleSymptomToggle = (symptom) => {
     setSymptomList(prev =>
@@ -155,19 +181,43 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
   };
 
   const executeSosForPatient = async () => {
+    if (!selectedPatient?.uid) {
+      alert('Please select a family member first.');
+      return;
+    }
     try {
       setIsDispatching(true);
-      await API.post('/emergency/sos', {
-        alert_message: `Family Report for ${selectedPatient?.fullName || 'Patient'}: ${symptomList.join(', ')}`,
-        description: `Initiated by Family Guardian (${user?.fullName || 'Family'}). Details: ${symptomDesc}`,
-        symptoms: symptomList,
-        location: { lat: 12.9716, lng: 77.5946 }
-      });
+      const payload = {
+        patientUid: selectedPatient.uid,
+        patient_uid: selectedPatient.uid,
+        emergencyType: emergencyType || 'Cardiac',
+        alert_message: `Emergency Ambulance Request for ${selectedPatient.fullName}: ${symptomList.join(', ')}`,
+        description: symptomDesc ? `Guardian (${user?.fullName || 'Family'}). Details: ${symptomDesc}` : `Emergency reported by guardian for ${selectedPatient.fullName}`,
+        symptoms: symptomList.join(', '),
+        pickupAddress: pickupAddress || selectedPatient.address || '12 MG Road, Bengaluru, Karnataka',
+        location: { lat: 12.9716, lng: 77.5946 },
+        lat: 12.9716,
+        lng: 77.5946,
+        hospitalId: selectedHospitalId ? Number(selectedHospitalId) : null,
+        destinationHospitalId: selectedHospitalId ? Number(selectedHospitalId) : null,
+        requiresAmbulance: true
+      };
+
+      try {
+        await API.post('/ambulance/request', payload);
+      } catch {
+        // Fallback to /emergency/sos
+        await API.post('/emergency/sos', {
+          ...payload,
+          symptoms: symptomList
+        });
+      }
+
       setIsConfirmModalOpen(false);
       switchTab('emergency');
       refresh();
-    } catch {
-      alert('Failed to dispatch emergency SOS. Please call emergency services immediately.');
+    } catch (err) {
+      alert('Failed to dispatch emergency ambulance: ' + (err.response?.data?.error || 'Please call emergency services immediately.'));
     } finally {
       setIsDispatching(false);
     }
@@ -224,9 +274,10 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
             <button
               onClick={() => setIsConfirmModalOpen(true)}
               className="btn btn-critical btn-sm"
-              title="Report an emergency for your linked family member"
+              title="Request Ambulance"
+              id="header-request-ambulance-btn"
             >
-              🚨 Report Emergency for {selectedPatient.fullName?.split(' ')[0]}
+              🚑 Request Ambulance for {selectedPatient.fullName?.split(' ')[0]}
             </button>
           )}
         </div>
@@ -273,28 +324,68 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
         />
       </div>
 
-      {/* High-Priority Active Emergency Banner */}
+      {/* High-Priority Active Emergency Ambulance Tracking Card */}
       {activeSos && (
         <div style={{ marginBottom: 'var(--space-6)' }}>
-          <div className="alert alert-critical" style={{ padding: '16px 20px', borderRadius: 'var(--radius-lg)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>🚨</span>
+          <div className="alert alert-critical" style={{ padding: '20px 24px', borderRadius: 'var(--radius-xl, 16px)', background: 'linear-gradient(135deg, #FEF2F2 0%, #FFFFFF 100%)', border: '2px solid #FECACA', boxShadow: '0 8px 24px rgba(220, 38, 38, 0.12)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  background: '#DC2626',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '26px',
+                  boxShadow: '0 0 18px rgba(220, 38, 38, 0.55)',
+                  flexShrink: 0,
+                  animation: 'ambulanceBeacon 1.2s infinite ease-in-out'
+                }}>
+                  🚑
+                </div>
                 <div>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-critical)' }}>
-                    ACTIVE EMERGENCY FOR {activeSos.patient?.fullName || selectedPatient?.fullName || 'PATIENT'} (SOS-{activeSos.id})
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '16px', fontWeight: 800, color: '#DC2626' }}>
+                      ACTIVE EMERGENCY: {activeSos.patient?.fullName || selectedPatient?.fullName || 'PATIENT'} (#SOS-{activeSos.id})
+                    </span>
+                    <StatusBadge status={activeSos.severity || 'CRITICAL'} size="sm" />
                   </div>
-                  <div style={{ fontSize: '12px', color: 'var(--color-gray-700)', marginTop: '2px' }}>
-                    Hospital: {assignedHospital?.name || 'Assigned General Hospital'} • Ambulance: {activeSos.ambulanceStatus?.replace(/_/g, ' ') || 'EN ROUTE'} • Severity: {activeSos.severity || 'CRITICAL'}
+                  <div style={{ fontSize: '13px', color: '#334155', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <span>Unit: <strong style={{ color: '#0B1F3A' }}>{assignedAmbulance?.unitId || activeSos.ambulanceUnitId || 'AMB-102'}</strong></span>
+                    <span>•</span>
+                    <span>Status: <strong style={{ color: '#DC2626' }}>{getWorkflowAmbulanceStatus(activeSos, trackingData)}</strong></span>
+                    <span>•</span>
+                    <span>Hospital: <strong>{assignedHospital?.name || activeSos.hospitalName || 'City General Hospital'}</strong></span>
+                    <span>•</span>
+                    <span style={{ color: '#0F766E', fontWeight: 800, background: '#F0FDFA', padding: '2px 8px', borderRadius: '10px', border: '1px solid #99F6E4' }}>
+                      ⏱️ ETA: ~{trackingData?.eta || liveAmbulanceLoc?.eta || 4} min
+                    </span>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => switchTab('emergency')}
-                className="btn btn-critical btn-sm"
-              >
-                🗺️ Track Ambulance & Hospital Live
-              </button>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => switchTab('emergency')}
+                  className="btn btn-critical"
+                  style={{
+                    padding: '10px 22px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>🗺️</span>
+                  <span>Track Ambulance Live</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -367,16 +458,30 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
                     <span style={{ fontSize: '12px', color: isSelected ? 'var(--color-secondary)' : 'var(--color-gray-500)', fontWeight: 600 }}>
                       {isSelected ? '✓ Currently Selected' : 'Click to inspect vitals'}
                     </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedPatientUid(patient.uid);
-                        switchTab('telemetry');
-                      }}
-                      className="btn btn-secondary btn-xs"
-                    >
-                      View Telemetry →
-                    </button>
+                    {hasActiveSos ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPatientUid(patient.uid);
+                          switchTab('emergency');
+                        }}
+                        className="btn btn-critical btn-xs"
+                        style={{ fontWeight: 800 }}
+                      >
+                        🚨 Track Ambulance Live
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedPatientUid(patient.uid);
+                          switchTab('telemetry');
+                        }}
+                        className="btn btn-secondary btn-xs"
+                      >
+                        View Telemetry →
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -451,7 +556,7 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
     </div>
   );
 
-  // Render Emergency Tab with Live Google Maps Tracking
+  // Render Emergency Tab with Live Uber-Style Ambulance Tracking
   const renderEmergencyTab = () => {
     if (!activeSos) {
       return (
@@ -460,16 +565,16 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
             <div className="card-header">
               <h3 className="card-title">
                 <span>🛡️</span>
-                <span>Emergency Dispatch Status</span>
+                <span>Live Ambulance Journey Status</span>
               </h3>
             </div>
             <div className="card-content" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
               <div style={{ fontSize: '48px', marginBottom: '16px' }}>✓</div>
               <h4 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-gray-900)', marginBottom: '8px' }}>
-                All Linked Family Members Are Safe
+                No active ambulance journey.
               </h4>
-              <p style={{ color: 'var(--color-gray-600)', fontSize: '14px', maxWidth: '420px', margin: '0 auto 24px auto' }}>
-                No active emergency dispatch requests currently exist for {selectedPatient?.fullName || 'your family members'}. Live WebSocket monitoring is active.
+              <p style={{ color: 'var(--color-gray-600)', fontSize: '14px', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.5 }}>
+                All family members are safe and stable. No emergency ambulance journeys are currently active. Live 24/7 telemetry monitoring and command center sync remain active.
               </p>
 
               {selectedPatient && (
@@ -477,8 +582,10 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
                   onClick={() => setIsConfirmModalOpen(true)}
                   className="btn btn-critical"
                   style={{ padding: '12px 24px' }}
+                  title="Request Ambulance"
+                  id="request-ambulance-btn"
                 >
-                  🚨 Report Urgent Medical Issue for {selectedPatient.fullName}
+                  🚑 Request Ambulance for {selectedPatient.fullName}
                 </button>
               )}
             </div>
@@ -487,16 +594,35 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
       );
     }
 
+    const currentStatus = liveAmbulanceLoc?.status || trackingData?.status || assignedAmbulance?.status || activeSos.status;
+    const ambUnit = liveAmbulanceLoc?.unitId || trackingData?.ambulanceUnitId || assignedAmbulance?.unitId || activeSos.ambulanceUnitId || 'AMB-102';
+    const driver = assignedAmbulance?.driverName || trackingData?.driverName || 'Officer Rajiv';
+    const phone = assignedAmbulance?.driverPhone || '9876543210';
+    const regPlate = assignedAmbulance?.vehicleRegistration || 'KA-01-EQ-9042';
+    const vType = assignedAmbulance?.vehicleType || 'Type-D Advanced Cardiac Life Support (ACLS)';
+    const hosp = assignedHospital?.name || activeSos.hospitalName || 'City General Hospital';
+    const ambCoords = liveAmbulanceLoc ? [liveAmbulanceLoc.latitude, liveAmbulanceLoc.longitude]
+      : (trackingData?.ambulanceLatitude ? [trackingData.ambulanceLatitude, trackingData.ambulanceLongitude]
+      : (assignedAmbulance?.latitude ? [assignedAmbulance.latitude, assignedAmbulance.longitude] : null));
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-        {/* Section 4: Premium Emergency Status Card */}
+        {/* Uber-Style Journey Status Stepper (Requirement 3) */}
+        <UberJourneyStepper
+          currentStatus={currentStatus}
+          timestamps={trackingData?.timestamps}
+          distanceKm={trackingData?.distance || liveAmbulanceLoc?.distance}
+          etaMinutes={trackingData?.eta || liveAmbulanceLoc?.eta}
+        />
+
+        {/* Section 4: Premium Emergency Summary Card */}
         <div className="active-emergency-status-card">
           <div className="emergency-status-row">
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '22px' }}>🚨</span>
                 <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-critical)' }}>
-                  ACTIVE EMERGENCY: {selectedPatient?.fullName || 'PATIENT'} (SOS-{activeSos.id})
+                  ACTIVE EMERGENCY: {selectedPatient?.fullName || activeSos.patient?.fullName || 'PATIENT'} (#SOS-{activeSos.id})
                 </span>
                 <StatusBadge status={activeSos.severity || 'CRITICAL'} size="sm" />
               </div>
@@ -516,14 +642,14 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
               <div className="emergency-status-item">
                 <span className="emergency-status-label">Assigned Hospital</span>
                 <span className="emergency-status-value">
-                  {assignedHospital?.name || activeSos.hospitalName || 'Searching Hospital...'}
+                  {hosp}
                 </span>
               </div>
 
               <div className="emergency-status-item">
-                <span className="emergency-status-label">Doctor</span>
+                <span className="emergency-status-label">Attending Doctor</span>
                 <span className="emergency-status-value">
-                  {assignedDoctor?.name ? `Dr. ${assignedDoctor.name}` : (activeSos.doctorName ? (activeSos.doctorName.startsWith('Dr.') ? activeSos.doctorName : `Dr. ${activeSos.doctorName}`) : (activeSos.status === 'HOSPITAL_ASSIGNED' ? 'Pending Acceptance' : 'Awaiting Assignment'))}
+                  {assignedDoctor?.name ? `Dr. ${assignedDoctor.name}` : (activeSos.doctorName ? (activeSos.doctorName.startsWith('Dr.') ? activeSos.doctorName : `Dr. ${activeSos.doctorName}`) : (activeSos.status === 'DOCTOR_ASSIGNED' ? 'Doctor Assigned' : activeSos.status === 'DOCTOR_PENDING' ? 'Awaiting Doctor Assignment' : 'Awaiting Assignment'))}
                 </span>
               </div>
 
@@ -537,7 +663,7 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
           </div>
         </div>
 
-        {/* Live Google Maps Tracking and Timeline */}
+        {/* Live Uber-Style Ambulance Tracking Map and Response Progress */}
         <div className="dashboard-map-grid">
           <div>
             <div style={{ marginBottom: 'var(--space-2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -552,28 +678,69 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
             <GoogleMapTracking
               patientLocation={[activeSos.latitude || 12.9716, activeSos.longitude || 77.5946]}
               hospitalLocation={assignedHospital ? [assignedHospital.lat, assignedHospital.lng] : null}
-              ambulanceLocation={trackingData?.ambulanceLatitude ? [trackingData.ambulanceLatitude, trackingData.ambulanceLongitude] : null}
-              ambulanceStatus={trackingData?.status || activeSos.status}
-              ambulanceUnitId={trackingData?.ambulanceUnitId || activeSos.ambulanceUnitId || 'AMB-102'}
-              driverName={trackingData?.driverName}
+              ambulanceLocation={ambCoords}
+              ambulanceStatus={currentStatus}
+              ambulanceUnitId={ambUnit}
+              driverName={driver}
+              driverPhone={phone}
+              driverRating={assignedAmbulance?.driverRating || 4.9}
+              vehicleRegistration={regPlate}
+              vehicleType={vType}
+              hospitalName={hosp}
               emergencyId={activeSos.id}
-              height="440px"
+              height="460px"
             />
           </div>
 
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">
-                <span>📋</span>
-                <span>Response Progress</span>
-              </h3>
-              <StatusBadge status={trackingData?.status || activeSos.status} size="sm" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            {/* Patient Dossier Details */}
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title">
+                  <span>👤</span>
+                  <span>Patient Emergency Dossier</span>
+                </h3>
+              </div>
+              <div className="card-content" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>Patient Name</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0B1F3A' }}>{selectedPatient?.fullName || activeSos.patient?.fullName || 'Patient'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>Age & Blood Group</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0B1F3A' }}>{selectedPatient?.age || 45} yrs • {selectedPatient?.bloodGroup || 'O+'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>Reported Symptoms</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#DC2626' }}>{Array.isArray(activeSos.symptoms) ? activeSos.symptoms.join(', ') : (activeSos.symptoms || 'Severe Chest Pain')}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '6px' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>Emergency Contact</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0B1F3A' }}>{selectedPatient?.contactPhone || '9876543210'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>Pickup Address</span>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#0B1F3A', maxWidth: '180px', textAlign: 'right' }}>{selectedPatient?.address || 'Brigade Rd, Bangalore'}</span>
+                </div>
+              </div>
             </div>
-            <div className="card-content" style={{ maxHeight: '440px', overflowY: 'auto' }}>
-              <EmergencyTimeline
-                currentStatus={trackingData?.status || activeSos.status}
-                timestamps={trackingData?.timestamps}
-              />
+
+            {/* Medical Audit & Response Timeline */}
+            <div className="card" style={{ flex: 1 }}>
+              <div className="card-header">
+                <h3 className="card-title">
+                  <span>📋</span>
+                  <span>Response Event Timeline</span>
+                </h3>
+                <StatusBadge status={currentStatus} size="sm" />
+              </div>
+              <div className="card-content" style={{ maxHeight: '260px', overflowY: 'auto' }}>
+                <EmergencyTimeline
+                  currentStatus={currentStatus}
+                  timestamps={trackingData?.timestamps}
+                  compact={true}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -763,69 +930,34 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
       title={getPageTitle()}
       user={user}
       wsConnected={wsConnected}
+      activeSubtab={activeTab}
+      onSelectSubtab={switchTab}
     >
-      {/* Top Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: 'var(--space-2)',
-        marginBottom: 'var(--space-6)',
-        borderBottom: '1px solid var(--color-gray-200)',
-        paddingBottom: 'var(--space-3)',
-        overflowX: 'auto'
-      }}>
-        <button
-          onClick={() => switchTab('overview')}
-          className={`btn ${activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-          aria-label="Overview"
-        >
-          <span aria-hidden="true">🏠</span>
-          <span>Overview</span>
-        </button>
-
-        <button
-          onClick={() => switchTab('emergency')}
-          className={`btn ${activeTab === 'emergency' ? 'btn-critical' : 'btn-secondary'} btn-sm`}
-          aria-label={activeSos ? `Active SOS (${activeSos.id})` : 'Emergency'}
-        >
-          <span aria-hidden="true">🚨</span>
-          <span>{activeSos ? `Active SOS (${activeSos.id})` : 'Emergency Tracking'}</span>
-        </button>
-
-        <button
-          onClick={() => switchTab('telemetry')}
-          className={`btn ${activeTab === 'telemetry' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-          aria-label="Live Telemetry"
-        >
-          <span aria-hidden="true">❤️</span>
-          <span>Live Telemetry</span>
-        </button>
-
-        <button
-          onClick={() => switchTab('history')}
-          className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-          aria-label="History"
-        >
-          <span aria-hidden="true">📋</span>
-          <span>History</span>
-        </button>
-      </div>
-
       {activeTab === 'overview' && renderOverviewTab()}
       {activeTab === 'emergency' && renderEmergencyTab()}
       {activeTab === 'telemetry' && renderTelemetryTab()}
       {activeTab === 'history' && renderHistoryTab()}
 
-      {/* Confirmation Modal to report emergency on patient's behalf */}
+      {/* Request Ambulance Form Modal */}
       <ConfirmModal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         onConfirm={executeSosForPatient}
+        title="Request Ambulance"
+        patientName={selectedPatient?.fullName || 'Patient'}
         patientLocation={{ lat: 12.9716, lng: 77.5946 }}
+        pickupAddress={pickupAddress}
+        onAddressChange={setPickupAddress}
+        emergencyType={emergencyType}
+        onEmergencyTypeChange={setEmergencyType}
         vitals={latestVital || { heartRate: 78, spo2: 98, temperature: 36.7 }}
         symptoms={symptomList}
         onSymptomToggle={handleSymptomToggle}
         description={symptomDesc}
         onDescriptionChange={setSymptomDesc}
+        hospitalList={hospitalList || []}
+        selectedHospitalId={selectedHospitalId}
+        onHospitalChange={setSelectedHospitalId}
         isSubmitting={isDispatching}
       />
     </DashboardLayout>

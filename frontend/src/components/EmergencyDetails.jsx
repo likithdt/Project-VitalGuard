@@ -56,9 +56,13 @@ export default function EmergencyDetails({ emergencyId, revision }) {
     <section className="detail-section">
       <h3>Patient</h3>
       <RecordedFields fields={[
-        ['Name', patient.fullName], ['Patient UID', patient.uid || emergency.patientUid],
-        ['Age', patient.age], ['Blood group', patient.bloodGroup], ['Contact', patient.phone],
-        ['Emergency contact', patient.emergencyContact], ['Address', patient.address],
+        ['Name', patient.fullName || emergency.patientName || emergency.patientUid],
+        ['Patient UID', patient.uid || emergency.patientUid],
+        ['Age', patient.age != null ? patient.age : (emergency.patientAge != null ? emergency.patientAge : '—')],
+        ['Blood group', patient.bloodGroup || emergency.patientBloodGroup || '—'],
+        ['Contact', patient.phone || emergency.patientPhone || '—'],
+        ['Emergency contact', patient.emergencyContact || emergency.patientEmergencyContact || '—'],
+        ['Address', patient.address || emergency.patientAddress || '—'],
       ]} />
     </section>
     <VitalsSummary vitals={emergency.currentVitals} />

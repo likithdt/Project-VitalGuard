@@ -15,7 +15,7 @@ import { EmptyState } from '../components/StateComponents';
 
 const getWorkflowAmbulanceStatus = (sos, tracking) => {
   if (!sos) return 'Standby';
-  if (sos.requiresAmbulance === false || sos.status === 'AMBULANCE_NOT_REQUIRED') {
+  if (sos.requiresAmbulance === false || sos.status === 'AMBULANCE_NOT_REQUIRED' || sos.ambulanceDecision === 'NOT_REQUIRED') {
     return 'Not Required';
   }
   if (tracking?.status) {
@@ -30,19 +30,33 @@ const getWorkflowAmbulanceStatus = (sos, tracking) => {
     case 'DETECTED':
       return 'Searching Hospital';
     case 'HOSPITAL_ASSIGNED':
+    case 'PENDING_HOSPITAL_ACCEPTANCE':
       return 'Awaiting Hospital Acceptance';
+    case 'HOSPITAL_REJECTED':
+      return 'Hospital Rejected - Re-routing';
+    case 'NEXT_HOSPITAL_REQUESTED':
+      return 'Contacting Next Hospital';
     case 'HOSPITAL_ACCEPTED':
-      return 'Hospital Accepted - Assigning';
+      return 'Hospital Accepted - Doctor Assigned';
+    case 'DOCTOR_ASSIGNED':
+      return 'Doctor Assigned - Assessing Ambulance';
+    case 'AMBULANCE_NOT_REQUIRED':
+      return 'Ambulance Not Required';
     case 'AMBULANCE_REQUESTED':
+    case 'PENDING_DRIVER_ACCEPTANCE':
       return 'Request Sent to Driver';
     case 'AMBULANCE_ACCEPTED':
+    case 'DRIVER_ACCEPTED':
       return 'Driver Accepted - Preparing Dispatch';
     case 'AMBULANCE_DISPATCHED':
+    case 'JOURNEY_STARTED':
     case 'EN_ROUTE_TO_PATIENT':
       return 'En Route to Patient';
     case 'ARRIVED_AT_PATIENT':
+    case 'ARRIVED_AT_PICKUP':
       return 'Arrived at Patient';
     case 'PATIENT_PICKED_UP':
+    case 'PATIENT_ONBOARD':
       return 'Patient Picked Up';
     case 'EN_ROUTE_TO_HOSPITAL':
       return 'En Route to Hospital';
@@ -1015,7 +1029,7 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
               <div className="emergency-status-item">
                 <span className="emergency-status-label">Specialist Doctor</span>
                 <span className="emergency-status-value">
-                  {assignedDoctor?.name ? `Dr. ${assignedDoctor.name}` : (activeSos.doctorName ? (activeSos.doctorName.startsWith('Dr.') ? activeSos.doctorName : `Dr. ${activeSos.doctorName}`) : (activeSos.status === 'HOSPITAL_ASSIGNED' ? 'Pending Acceptance' : 'Awaiting Assignment'))}
+                  {assignedDoctor?.name ? `Dr. ${assignedDoctor.name}` : (activeSos.doctorName ? (activeSos.doctorName.startsWith('Dr.') ? activeSos.doctorName : `Dr. ${activeSos.doctorName}`) : (activeSos.status === 'DOCTOR_ASSIGNED' ? 'Doctor Assigned' : activeSos.status === 'DOCTOR_PENDING' ? 'Awaiting Doctor Assignment' : 'Awaiting Assignment'))}
                 </span>
               </div>
 
@@ -1171,6 +1185,8 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
       title={getPageTitle()}
       user={user}
       wsConnected={wsConnected}
+      activeSubtab={activeTab}
+      onSelectSubtab={switchTab}
     >
       {/* Cancellation Success / Error Notification Banner */}
       {cancellationNotification && (
@@ -1218,52 +1234,6 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
           </button>
         </div>
       )}
-
-      {/* Top Tab Switcher */}
-      <div style={{
-        display: 'flex',
-        gap: 'var(--space-2)',
-        marginBottom: 'var(--space-6)',
-        borderBottom: '1px solid var(--color-gray-200)',
-        paddingBottom: 'var(--space-3)',
-        overflowX: 'auto'
-      }}>
-        <button
-          onClick={() => switchTab('overview')}
-          className={`btn ${activeTab === 'overview' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-          aria-label="Overview"
-        >
-          <span aria-hidden="true">🏠</span>
-          <span>Overview</span>
-        </button>
-
-        <button
-          onClick={() => switchTab('emergency')}
-          className={`btn ${activeTab === 'emergency' ? 'btn-critical' : 'btn-secondary'} btn-sm`}
-          aria-label={activeSos ? `Active SOS (${activeSos.id})` : 'Emergency'}
-        >
-          <span aria-hidden="true">🚨</span>
-          <span>{activeSos ? `Active SOS (${activeSos.id})` : 'Emergency'}</span>
-        </button>
-
-        <button
-          onClick={() => switchTab('chat')}
-          className={`btn ${activeTab === 'chat' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-          aria-label="Med-AI Advisor"
-        >
-          <span aria-hidden="true">🤖</span>
-          <span>Med-AI Advisor</span>
-        </button>
-
-        <button
-          onClick={() => switchTab('history')}
-          className={`btn ${activeTab === 'history' ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-          aria-label="History"
-        >
-          <span aria-hidden="true">📋</span>
-          <span>History</span>
-        </button>
-      </div>
 
       {activeTab === 'overview' && renderOverviewTab()}
       {activeTab === 'emergency' && renderEmergencyTab()}

@@ -3,8 +3,9 @@ import { Link, useNavigate, useLocation, useInRouterContext } from 'react-router
 import { useAuth } from '../context/AuthContext';
 
 /**
- * Sidebar - Section 2 & 19
- * Role-tailored navigation with active indicator, medical brand logo, and sign out
+ * Sidebar - Primary Application Navigation System
+ * Role-tailored navigation with active indicator, medical brand logo, and sign out.
+ * Single source of navigation truth across all VitalGuard dashboards.
  * Safe in both Router and non-Router test environments.
  */
 
@@ -12,65 +13,68 @@ const getNavItemsForRole = (role) => {
   switch (role) {
     case 'PATIENT':
       return [
-        { path: '/user-dashboard', label: 'Dashboard', icon: '🏥' },
-        { path: '/user-dashboard?tab=chat', label: 'Med-AI Advisor', icon: '🤖' },
-        { path: '/user-dashboard?tab=history', label: 'Incident History', icon: '📋' },
-        { path: '/profile', label: 'Patient Profile', icon: '👤' },
+        { path: '/user-dashboard', label: 'Overview', icon: '🏠', ariaLabel: 'Overview' },
+        { path: '/user-dashboard?tab=emergency', label: 'Emergency Tracking', icon: '🚨', ariaLabel: 'Emergency' },
+        { path: '/user-dashboard?tab=chat', label: 'Med-AI Advisor', icon: '🤖', ariaLabel: 'Med-AI Advisor' },
+        { path: '/user-dashboard?tab=history', label: 'Incident History', icon: '📋', ariaLabel: 'History' },
+        { path: '/profile', label: 'Patient Profile', icon: '👤', ariaLabel: 'Patient Profile' },
       ];
     case 'FAMILY_MEMBER':
       return [
-        { path: '/family-dashboard', label: 'Family Console', icon: '👨‍👩‍👧‍👦' },
-        { path: '/family-dashboard?tab=telemetry', label: 'Live Telemetry', icon: '❤️' },
-        { path: '/family-dashboard?tab=history', label: 'Incident History', icon: '📋' },
-        { path: '/profile', label: 'Guardian Profile', icon: '👤' },
+        { path: '/family-dashboard', label: 'Family Guardian Console', icon: '👨‍👩‍👧‍👦', ariaLabel: 'Overview' },
+        { path: '/family-dashboard?tab=emergency', label: 'Emergency Tracking', icon: '🚨', ariaLabel: 'Emergency Tracking' },
+        { path: '/family-dashboard?tab=telemetry', label: 'Live Telemetry', icon: '❤️', ariaLabel: 'Live Telemetry' },
+        { path: '/family-dashboard?tab=history', label: 'Incident History', icon: '📋', ariaLabel: 'History' },
+        { path: '/profile', label: 'Guardian Profile', icon: '👤', ariaLabel: 'Guardian Profile' },
       ];
     case 'DOCTOR':
       return [
-        { path: '/healthcare-dashboard', label: 'Doctor Cases', icon: '👨‍⚕️' },
-        { path: '/profile', label: 'My Profile', icon: '👤' },
+        { path: '/healthcare-dashboard', label: 'Doctor Cases', icon: '👨‍⚕️', ariaLabel: 'Doctor Cases' },
+        { path: '/profile', label: 'My Profile', icon: '👤', ariaLabel: 'My Profile' },
       ];
     case 'HOSPITAL_ADMIN':
       return [
-        { path: '/healthcare-dashboard', label: 'Command Center', icon: '🏥' },
-        { path: '/healthcare-dashboard?tab=resources', label: 'Hospital Resources', icon: '🛏️' },
-        { path: '/profile', label: 'Admin Profile', icon: '👤' },
+        { path: '/healthcare-dashboard', label: 'Command Center', icon: '🏥', ariaLabel: 'Command Center' },
+        { path: '/healthcare-dashboard?tab=resources', label: 'Hospital Resources', icon: '🛏️', ariaLabel: 'Hospital Resources' },
+        { path: '/profile', label: 'Admin Profile', icon: '👤', ariaLabel: 'Admin Profile' },
       ];
     case 'AMBULANCE_DRIVER':
       return [
-        { path: '/healthcare-dashboard', label: 'Ambulance Console', icon: '🚑' },
-        { path: '/profile', label: 'Driver Profile', icon: '👤' },
+        { path: '/healthcare-dashboard', label: 'Ambulance Console', icon: '🚑', ariaLabel: 'Ambulance Console' },
+        { path: '/profile', label: 'Driver Profile', icon: '👤', ariaLabel: 'Driver Profile' },
       ];
     case 'ADMIN':
     case 'SYSTEM_ADMIN':
       return [
-        { path: '/admin', label: 'Admin Dashboard', icon: '⚡' },
-        { path: '/admin?tab=doctors', label: 'Doctors', icon: '👨‍⚕️' },
-        { path: '/admin?tab=hospital-admins', label: 'Hospital Admins', icon: '🏥' },
-        { path: '/admin?tab=drivers', label: 'Ambulance Drivers', icon: '🚑' },
-        { path: '/admin?tab=hospitals', label: 'Hospitals', icon: '🏢' },
-        { path: '/admin?tab=ambulances', label: 'Ambulances', icon: '🚨' },
-        { path: '/admin?tab=emergencies', label: 'System Emergencies', icon: '📡' },
-        { path: '/admin?tab=users', label: 'User Accounts', icon: '👥' },
-        { path: '/admin?tab=audit-logs', label: 'Audit Trail', icon: '📜' },
-        { path: '/profile', label: 'Admin Profile', icon: '👤' },
+        { path: '/admin', label: 'Admin Dashboard', icon: '⚡', ariaLabel: 'Admin Dashboard' },
+        { path: '/admin?tab=doctors', label: 'Doctors', icon: '👨‍⚕️', ariaLabel: 'Doctors' },
+        { path: '/admin?tab=hospital-admins', label: 'Hospital Admins', icon: '🏥', ariaLabel: 'Hospital Admins' },
+        { path: '/admin?tab=drivers', label: 'Ambulance Drivers', icon: '🚑', ariaLabel: 'Ambulance Drivers' },
+        { path: '/admin?tab=hospitals', label: 'Hospitals', icon: '🏢', ariaLabel: 'Hospitals' },
+        { path: '/admin?tab=ambulances', label: 'Ambulances', icon: '🚨', ariaLabel: 'Ambulances' },
+        { path: '/admin?tab=emergencies', label: 'System Emergencies', icon: '📡', ariaLabel: 'System Emergencies' },
+        { path: '/admin?tab=users', label: 'User Accounts', icon: '👥', ariaLabel: 'User Accounts' },
+        { path: '/admin?tab=audit-logs', label: 'Audit Trail', icon: '📜', ariaLabel: 'Audit Trail' },
+        { path: '/profile', label: 'Admin Profile', icon: '👤', ariaLabel: 'Admin Profile' },
       ];
     default:
       return [
-        { path: '/user-dashboard', label: 'Dashboard', icon: '🏥' },
-        { path: '/user-dashboard?tab=chat', label: 'Med-AI Advisor', icon: '🤖' },
-        { path: '/user-dashboard?tab=history', label: 'Incident History', icon: '📋' },
-        { path: '/profile', label: 'Profile', icon: '👤' },
+        { path: '/user-dashboard', label: 'Overview', icon: '🏠', ariaLabel: 'Overview' },
+        { path: '/user-dashboard?tab=emergency', label: 'Emergency Tracking', icon: '🚨', ariaLabel: 'Emergency' },
+        { path: '/user-dashboard?tab=chat', label: 'Med-AI Advisor', icon: '🤖', ariaLabel: 'Med-AI Advisor' },
+        { path: '/user-dashboard?tab=history', label: 'Incident History', icon: '📋', ariaLabel: 'History' },
+        { path: '/profile', label: 'Profile', icon: '👤', ariaLabel: 'Profile' },
       ];
   }
 };
 
-const checkIsItemActive = (itemPath, currentPath, currentSearch = '') => {
+const checkIsItemActive = (itemPath, currentPath, currentSearch = '', activeSubtab = null) => {
   if (itemPath === '/profile') {
     return currentPath === '/profile';
   }
 
   const currentParams = new URLSearchParams(currentSearch);
-  const currentTab = currentParams.get('tab');
+  const currentTab = activeSubtab || currentParams.get('tab');
 
   if (itemPath.includes('?tab=')) {
     const [itemBase, itemQuery] = itemPath.split('?');
@@ -87,7 +91,7 @@ const checkIsItemActive = (itemPath, currentPath, currentSearch = '') => {
   }
 
   if (currentPath === itemPath || (itemPath === '/admin' && currentPath === '/admin/system')) {
-    return !currentTab || currentTab === 'overview';
+    return !currentTab || currentTab === 'overview' || currentTab === 'queue';
   }
 
   return false;
@@ -102,7 +106,8 @@ const SidebarContent = ({
   onNavigate,
   onLogout,
   user,
-  useRouterLink = false
+  useRouterLink = false,
+  activeSubtab = null
 }) => {
   const role = user?.role || 'PATIENT';
   const navItems = getNavItemsForRole(role);
@@ -146,29 +151,35 @@ const SidebarContent = ({
         </div>
 
         {navItems.map((item) => {
-          const isActive = checkIsItemActive(item.path, pathname, search);
+          const isActive = checkIsItemActive(item.path, pathname, search, activeSubtab);
 
           if (useRouterLink) {
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={() => onCloseMobile?.()}
+                onClick={() => {
+                  onNavigate?.(item.path);
+                  onCloseMobile?.();
+                }}
                 className={`sidebar-nav-link ${isActive ? 'active' : ''}`}
                 title={item.label}
+                aria-label={item.ariaLabel || item.label}
+                role="button"
               >
-                <span className="sidebar-nav-icon" aria-hidden="true">
-                  {item.icon}
-                </span>
-                {!isCollapsed && <span>{item.label}</span>}
+                {!isCollapsed ? (
+                  <span>{item.icon} {item.label}</span>
+                ) : (
+                  <span className="sidebar-nav-icon" aria-hidden="true">{item.icon}</span>
+                )}
               </Link>
             );
           }
 
           return (
-            <a
+            <button
+              type="button"
               key={item.path}
-              href={item.path}
               onClick={(e) => {
                 e.preventDefault();
                 onNavigate?.(item.path);
@@ -176,12 +187,25 @@ const SidebarContent = ({
               }}
               className={`sidebar-nav-link ${isActive ? 'active' : ''}`}
               title={item.label}
+              aria-label={item.ariaLabel || item.label}
+              role="button"
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center'
+              }}
             >
-              <span className="sidebar-nav-icon" aria-hidden="true">
-                {item.icon}
-              </span>
-              {!isCollapsed && <span>{item.label}</span>}
-            </a>
+              {!isCollapsed ? (
+                <span>{item.icon} {item.label}</span>
+              ) : (
+                <span className="sidebar-nav-icon" aria-hidden="true">{item.icon}</span>
+              )}
+            </button>
           );
         })}
       </nav>
@@ -267,7 +291,14 @@ const SidebarWithRouter = (props) => {
       search={location.search}
       fullPath={location.pathname + location.search}
       useRouterLink={true}
-      onNavigate={(path) => navigate(path)}
+      activeSubtab={props.activeSubtab}
+      onNavigate={(path) => {
+        if (props.onSelectSubtab) {
+          const tab = new URLSearchParams(path.split('?')[1] || '').get('tab') || 'overview';
+          props.onSelectSubtab(tab);
+        }
+        navigate(path);
+      }}
       onLogout={() => {
         logout();
         navigate('/login');
@@ -283,8 +314,16 @@ const SidebarWithoutRouter = (props) => {
     <SidebarContent
       {...props}
       user={user}
-      pathname="/"
-      onNavigate={() => {}}
+      pathname={typeof window !== 'undefined' ? window.location.pathname : '/'}
+      search={typeof window !== 'undefined' ? window.location.search : ''}
+      activeSubtab={props.activeSubtab}
+      useRouterLink={false}
+      onNavigate={(path) => {
+        if (props.onSelectSubtab) {
+          const tab = new URLSearchParams(path.split('?')[1] || '').get('tab') || 'overview';
+          props.onSelectSubtab(tab);
+        }
+      }}
       onLogout={() => logout?.()}
     />
   );

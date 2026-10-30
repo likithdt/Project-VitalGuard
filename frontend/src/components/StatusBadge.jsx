@@ -61,9 +61,16 @@ const getBadgeConfig = (status) => {
     case 'ACTIVE':
       return { className: 'badge-available', label: 'Active', icon: '✓' };
     case 'PENDING':
-      return { className: 'badge-moderate', label: 'Pending', icon: '⏳' };
+    case 'PENDING_HOSPITAL_ACCEPTANCE':
+    case 'PENDING_DRIVER_ACCEPTANCE':
+      return { className: 'badge-moderate', label: normalized === 'PENDING_HOSPITAL_ACCEPTANCE' ? 'Awaiting Hospital' : normalized === 'PENDING_DRIVER_ACCEPTANCE' ? 'Awaiting Driver' : 'Pending', icon: '⏳' };
     case 'REJECTED':
-      return { className: 'badge-critical', label: 'Rejected', icon: '✕' };
+    case 'HOSPITAL_REJECTED':
+      return { className: 'badge-critical', label: normalized === 'HOSPITAL_REJECTED' ? 'Hospital Rejected' : 'Rejected', icon: '✕' };
+    case 'NEXT_HOSPITAL_REQUESTED':
+      return { className: 'badge-high', label: 'Next Hospital Requested', icon: '🔄' };
+    case 'AMBULANCE_NOT_REQUIRED':
+      return { className: 'badge-available', label: 'Ambulance Not Required', icon: '🏥' };
     case 'SUSPENDED':
       return { className: 'badge-high', label: 'Suspended', icon: '⏸' };
     case 'DEACTIVATED':
@@ -74,6 +81,14 @@ const getBadgeConfig = (status) => {
       return { className: 'badge-requested', label: 'Hospital Assigned', icon: '🏥' };
     case 'DOCTOR_ASSIGNED':
       return { className: 'badge-accepted', label: 'Doctor Assigned', icon: '👨‍⚕️' };
+    case 'DRIVER_ACCEPTED':
+      return { className: 'badge-accepted', label: 'Driver Accepted', icon: '🚑' };
+    case 'JOURNEY_STARTED':
+      return { className: 'badge-enroute', label: 'Journey Started', icon: '🚑' };
+    case 'ARRIVED_AT_PICKUP':
+      return { className: 'badge-arrived', label: 'Arrived at Pickup', icon: '📍' };
+    case 'PATIENT_ONBOARD':
+      return { className: 'badge-arrived', label: 'Patient Onboard', icon: '👤' };
     default:
       return { className: 'badge-resolved', label: normalized.replace(/_/g, ' ') || 'Unknown', icon: '•' };
   }

@@ -18,5 +18,9 @@ public interface AmbulanceRepository extends JpaRepository<Ambulance, Long> {
     @Query("SELECT a FROM Ambulance a WHERE a.driver.id = :driverId")
     Optional<Ambulance> findByDriverId(@Param("driverId") Long driverId);
 
-    Optional<Ambulance> findByCurrentEmergencyId(Long currentEmergencyId);
+    Optional<Ambulance> findFirstByCurrentEmergencyId(Long currentEmergencyId);
+
+    default Optional<Ambulance> findByCurrentEmergencyId(Long currentEmergencyId) {
+        return findFirstByCurrentEmergencyId(currentEmergencyId);
+    }
 }

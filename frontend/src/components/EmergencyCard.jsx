@@ -98,13 +98,14 @@ const EmergencyCard = ({
               }}>
                 Temp: {emergency?.temperature || '?'}°C
               </span>
-              <span className={`badge badge-${ambulanceRequired ? 'critical' : 'success'}`}>
-                {ambulanceRequired ? '🚑 Ambulance Required' : '✓ Ambulance Not Required'}
+              <span className={`badge badge-${ambulanceRequired === true ? 'critical' : ambulanceRequired === false ? 'success' : 'warning'}`}>
+                {ambulanceRequired === true ? '🚑 Ambulance Required' : 
+                 ambulanceRequired === false ? '✓ Ambulance Not Required' : '⏳ Pending Doctor Assessment'}
               </span>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', alignItems: 'center' }}>
-            {showActions && role === 'hospital' && emergency?.status === 'HOSPITAL_ASSIGNED' && (
+            {showActions && role === 'hospital' && (emergency?.status === 'HOSPITAL_ASSIGNED' || emergency?.status === 'PENDING_HOSPITAL_ACCEPTANCE' || emergency?.status === 'NEXT_HOSPITAL_REQUESTED') && (
               <>
                 <button 
                   onClick={(e) => { e.stopPropagation(); onClick?.(emergency); }}
@@ -117,12 +118,23 @@ const EmergencyCard = ({
                   onClick={(e) => { e.stopPropagation(); onAccept?.(emergency); }}
                   className="btn btn-critical"
                   style={{ flex: 1, fontWeight: 'var(--font-weight-extrabold)' }}
+                  data-testid="accept-emergency-btn"
                 >
-                  ✓ ACCEPT & DISPATCH
+                  ✓ ACCEPT EMERGENCY
                 </button>
+                {onDecline && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onDecline?.(emergency); }}
+                    className="btn btn-secondary"
+                    style={{ flex: 1, fontWeight: 'var(--font-weight-bold)', color: 'var(--color-critical)' }}
+                    data-testid="reject-emergency-btn"
+                  >
+                    ✕ REJECT
+                  </button>
+                )}
               </>
             )}
-            {showActions && role === 'hospital' && emergency?.status !== 'HOSPITAL_ASSIGNED' && (
+            {showActions && role === 'hospital' && emergency?.status !== 'HOSPITAL_ASSIGNED' && emergency?.status !== 'PENDING_HOSPITAL_ACCEPTANCE' && emergency?.status !== 'NEXT_HOSPITAL_REQUESTED' && (
               <button 
                 onClick={(e) => { e.stopPropagation(); onClick?.(emergency); }}
                 className="btn btn-primary"
@@ -225,7 +237,7 @@ const EmergencyCard = ({
           <span><strong>Dept:</strong> {emergency?.requiredDepartment || 'N/A'}</span>
           <span><strong>Hospital:</strong> {emergency?.hospitalName || 'Unassigned'}</span>
           <span><strong>Dr:</strong> {emergency?.doctorName || 'Unassigned'}</span>
-          <span><strong>Amb:</strong> {emergency?.ambulanceUnitId ? 'Assigned' : (ambulanceRequired ? 'Requested' : 'Not Required')}</span>
+          <span><strong>Amb:</strong> {emergency?.ambulanceUnitId ? 'Assigned' : (ambulanceRequired === true ? 'Requested' : ambulanceRequired === false ? 'Not Required' : 'Pending Assessment')}</span>
         </div>
       </div>
     );
@@ -258,8 +270,14 @@ const EmergencyCard = ({
             <span className={`badge badge-${statusClass}`}>
               {emergency?.status}
             </span>
-            {ambulanceRequired && (
+            {ambulanceRequired === true && (
               <span className="badge badge-critical">🚑 Required</span>
+            )}
+            {ambulanceRequired === false && (
+              <span className="badge badge-success">✓ Not Required</span>
+            )}
+            {ambulanceRequired === null && (
+              <span className="badge badge-warning">⏳ Pending Assessment</span>
             )}
           </div>
           <p style={{ 
@@ -343,13 +361,14 @@ const EmergencyCard = ({
           >
             👁 View Details
           </button>
-          {role === 'hospital' && emergency?.status === 'HOSPITAL_ASSIGNED' && (
+          {role === 'hospital' && (emergency?.status === 'HOSPITAL_ASSIGNED' || emergency?.status === 'PENDING_HOSPITAL_ACCEPTANCE' || emergency?.status === 'NEXT_HOSPITAL_REQUESTED') && (
             <button 
               onClick={(e) => { e.stopPropagation(); onAccept?.(emergency); }}
               className="btn btn-critical"
               style={{ flex: 1, fontWeight: 'var(--font-weight-extrabold)' }}
+              data-testid="accept-emergency-btn"
             >
-              ✓ ACCEPT & DISPATCH
+              ✓ ACCEPT EMERGENCY
             </button>
           )}
           {role === 'driver' && emergency?.status === 'AMBULANCE_REQUESTED' && (

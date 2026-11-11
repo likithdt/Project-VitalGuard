@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import StatusBadge from './StatusBadge';
 import { getDrivingRoute } from '../services/routing';
 
@@ -672,6 +672,7 @@ const GoogleMapTracking = ({
   // Handle Map Initialization on Mount
   const rawApiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '').trim();
   const isKeyUsable = Boolean(
+    import.meta.env.MODE !== 'test' &&
     rawApiKey &&
     rawApiKey.length >= 25 &&
     !rawApiKey.includes('your_google_maps_api_key') &&
@@ -683,35 +684,39 @@ const GoogleMapTracking = ({
     let initialized = false;
 
     if (isKeyUsable && !googleAuthFailed) {
-      loaderRef.current = new Loader({
-        apiKey: rawApiKey,
-        version: 'weekly',
-        libraries: ['routes', 'marker']
-      });
-
-      loaderRef.current.importLibrary('maps')
-        .then(({ Map }) => {
-          if (!containerRef.current) return;
-          const defaultLat = currentAmbCoord?.[0] || patPos?.[0] || 12.9716;
-          const defaultLng = currentAmbCoord?.[1] || patPos?.[1] || 77.5946;
-
-          const map = new Map(containerRef.current, {
-            center: { lat: defaultLat, lng: defaultLng },
-            zoom: 13,
-            mapTypeControl: false,
-            streetViewControl: false,
-            zoomControl: true
-          });
-
-          googleMapInstanceRef.current = map;
-          setMapProvider('google');
-          initialized = true;
-          if (onMapLoad) onMapLoad(map);
-        })
-        .catch((err) => {
-          console.warn('[VitalGuard] Google Maps failed to load, switching to Leaflet:', err);
-          if (!initialized) initLeafletMap();
+      try {
+        setOptions({
+          apiKey: rawApiKey,
+          version: 'weekly'
         });
+
+        importLibrary('maps')
+          .then(({ Map }) => {
+            if (!containerRef.current) return;
+            const defaultLat = currentAmbCoord?.[0] || patPos?.[0] || 12.9716;
+            const defaultLng = currentAmbCoord?.[1] || patPos?.[1] || 77.5946;
+
+            const map = new Map(containerRef.current, {
+              center: { lat: defaultLat, lng: defaultLng },
+              zoom: 13,
+              mapTypeControl: false,
+              streetViewControl: false,
+              zoomControl: true
+            });
+
+            googleMapInstanceRef.current = map;
+            setMapProvider('google');
+            initialized = true;
+            if (onMapLoad) onMapLoad(map);
+          })
+          .catch((err) => {
+            console.warn('[VitalGuard] Google Maps failed to load, switching to Leaflet:', err);
+            if (!initialized) initLeafletMap();
+          });
+      } catch (err) {
+        console.warn('[VitalGuard] Google Maps loader error, falling back to Leaflet:', err);
+        if (!initialized) initLeafletMap();
+      }
     } else {
       const leafletSuccess = initLeafletMap();
       if (!leafletSuccess) {

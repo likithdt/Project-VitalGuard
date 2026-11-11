@@ -15,6 +15,7 @@ const getNavItemsForRole = (role) => {
       return [
         { path: '/user-dashboard', label: 'Overview', icon: '🏠', ariaLabel: 'Overview' },
         { path: '/user-dashboard?tab=emergency', label: 'Emergency Tracking', icon: '🚨', ariaLabel: 'Emergency' },
+        { path: '/user-dashboard?tab=tracking', label: 'Live GPS Tracking', icon: '🧭', ariaLabel: 'Live GPS Tracking' },
         { path: '/user-dashboard?tab=chat', label: 'Med-AI Advisor', icon: '🤖', ariaLabel: 'Med-AI Advisor' },
         { path: '/user-dashboard?tab=history', label: 'Incident History', icon: '📋', ariaLabel: 'History' },
         { path: '/profile', label: 'Patient Profile', icon: '👤', ariaLabel: 'Patient Profile' },
@@ -61,6 +62,7 @@ const getNavItemsForRole = (role) => {
       return [
         { path: '/user-dashboard', label: 'Overview', icon: '🏠', ariaLabel: 'Overview' },
         { path: '/user-dashboard?tab=emergency', label: 'Emergency Tracking', icon: '🚨', ariaLabel: 'Emergency' },
+        { path: '/user-dashboard?tab=tracking', label: 'Live GPS Tracking', icon: '🧭', ariaLabel: 'Live GPS Tracking' },
         { path: '/user-dashboard?tab=chat', label: 'Med-AI Advisor', icon: '🤖', ariaLabel: 'Med-AI Advisor' },
         { path: '/user-dashboard?tab=history', label: 'Incident History', icon: '📋', ariaLabel: 'History' },
         { path: '/profile', label: 'Profile', icon: '👤', ariaLabel: 'Profile' },

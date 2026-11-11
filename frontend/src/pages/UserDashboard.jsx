@@ -9,6 +9,7 @@ import EmergencyTimeline from '../components/EmergencyTimeline';
 import EmergencyAlert from '../components/EmergencyAlert';
 import StatusBadge from '../components/StatusBadge';
 import GoogleMapTracking from '../components/GoogleMapTracking';
+import LiveRouteTracker from '../components/LiveRouteTracker';
 import ConfirmModal from '../components/ConfirmModal';
 import CancelEmergencyModal from '../components/CancelEmergencyModal';
 import { EmptyState } from '../components/StateComponents';
@@ -79,6 +80,7 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
   const activeTab = (rawTab === 'chat' || rawTab === 'med-ai' || rawTab === 'advisor') ? 'chat'
     : (rawTab === 'emergency' || rawTab === 'sos') ? 'emergency'
     : (rawTab === 'history') ? 'history'
+    : (rawTab === 'tracking' || rawTab === 'live-tracking' || rawTab === 'route') ? 'tracking'
     : 'overview';
 
   const switchTab = (tabKey) => {
@@ -521,7 +523,15 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => switchTab('tracking')}
+              className="btn btn-secondary btn-sm"
+              style={{ fontWeight: 700 }}
+              title="Open Live GPS Route Tracking"
+            >
+              🧭 Live Route Tracking
+            </button>
             <button
               onClick={() => switchTab('chat')}
               className="btn btn-primary btn-sm"
@@ -809,6 +819,59 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
             </div>
           </div>
         </div>
+
+        {/* Live Route Tracking Quick Access Banner */}
+        <div style={{
+          marginTop: 'var(--space-6)',
+          background: 'linear-gradient(135deg, #0B1F3A 0%, #1E3A8A 100%)',
+          borderRadius: 'var(--radius-xl, 16px)',
+          padding: 'var(--space-5, 20px) var(--space-6, 24px)',
+          color: '#FFFFFF',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 'var(--space-4, 16px)',
+          boxShadow: '0 4px 20px rgba(11, 31, 58, 0.25)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: '1.5px solid rgba(255, 255, 255, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px'
+            }}>
+              🧭
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#FFFFFF' }}>
+                Live GPS Route & Movement Tracking
+              </h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#93C5FD' }}>
+                Track your real-time GPS movement, route breadcrumbs and navigate to emergency medical centers.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => switchTab('tracking')}
+            className="btn btn-primary"
+            style={{
+              background: '#0D9488',
+              borderColor: '#14B8A6',
+              fontWeight: 800,
+              padding: '10px 20px',
+              borderRadius: 'var(--radius-lg, 10px)'
+            }}
+          >
+            ▶ Start Live Route Tracking
+          </button>
+        </div>
       </div>
     );
   };
@@ -1084,6 +1147,59 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
             </div>
           </div>
         </div>
+
+        {/* Live Route Tracking Quick Access Banner */}
+        <div style={{
+          marginTop: 'var(--space-6)',
+          background: 'linear-gradient(135deg, #0B1F3A 0%, #1E3A8A 100%)',
+          borderRadius: 'var(--radius-xl, 16px)',
+          padding: 'var(--space-5, 20px) var(--space-6, 24px)',
+          color: '#FFFFFF',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 'var(--space-4, 16px)',
+          boxShadow: '0 4px 20px rgba(11, 31, 58, 0.25)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: '1.5px solid rgba(255, 255, 255, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px'
+            }}>
+              🧭
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#FFFFFF' }}>
+                Live GPS Route & Movement Tracking
+              </h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#93C5FD' }}>
+                Track your real-time GPS movement, route breadcrumbs and navigate to emergency medical centers.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => switchTab('tracking')}
+            className="btn btn-primary"
+            style={{
+              background: '#0D9488',
+              borderColor: '#14B8A6',
+              fontWeight: 800,
+              padding: '10px 20px',
+              borderRadius: 'var(--radius-lg, 10px)'
+            }}
+          >
+            ▶ Start Live Route Tracking
+          </button>
+        </div>
       </div>
     );
   };
@@ -1173,10 +1289,25 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
     </div>
   );
 
+  const renderTrackingTab = () => (
+    <LiveRouteTracker
+      user={user}
+      activeEmergency={activeSos}
+      initialDestination={assignedHospital ? {
+        id: String(assignedHospital.id),
+        name: assignedHospital.name,
+        lat: assignedHospital.lat,
+        lng: assignedHospital.lng,
+        address: assignedHospital.address
+      } : null}
+    />
+  );
+
   const getPageTitle = () => {
     if (activeTab === 'chat') return 'Patient Health Command — Med-AI Advisor';
     if (activeTab === 'history') return 'Patient Health Command — Incident History';
     if (activeTab === 'emergency') return 'Patient Health Command — Active Emergency';
+    if (activeTab === 'tracking') return 'Patient Health Command — Live GPS Route Tracking';
     return 'Patient Dashboard';
   };
 
@@ -1239,6 +1370,7 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
       {activeTab === 'emergency' && renderEmergencyTab()}
       {activeTab === 'chat' && renderChatTab()}
       {activeTab === 'history' && renderHistoryTab()}
+      {activeTab === 'tracking' && renderTrackingTab()}
 
       {/* Emergency Confirmation Modal */}
       <ConfirmModal

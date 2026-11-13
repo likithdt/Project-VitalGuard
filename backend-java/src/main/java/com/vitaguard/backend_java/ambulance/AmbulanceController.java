@@ -521,9 +521,25 @@ public class AmbulanceController {
 
         Ambulance ambulance = ambulanceOpt.get();
 
-        // Only allow location updates when ambulance has an active emergency
-        if (ambulance.getCurrentEmergencyId() == null) {
-            return ResponseEntity.badRequest().body(Map.of("error", "No active emergency for this ambulance"));
+        // Resolve emergency ID associated with this ambulance if not already cached
+        Long emergencyId = ambulance.getCurrentEmergencyId();
+        if (emergencyId == null && body != null && body.get("emergencyId") != null) {
+            try {
+                emergencyId = Long.valueOf(body.get("emergencyId").toString());
+                ambulance.setCurrentEmergencyId(emergencyId);
+            } catch (Exception ignored) {}
+        }
+        if (emergencyId == null && requestRepository != null) {
+            try {
+                List<AmbulanceRequest> activeReqs = requestRepository.findByAmbulanceIdAndStatusIn(
+                    ambulance.getId(),
+                    List.of("PENDING", "ACCEPTED", "IN_PROGRESS", "DISPATCHED")
+                );
+                if (!activeReqs.isEmpty()) {
+                    emergencyId = activeReqs.get(0).getEmergencyId();
+                    ambulance.setCurrentEmergencyId(emergencyId);
+                }
+            } catch (Exception ignored) {}
         }
 
         Double lat = body.get("latitude") != null ? Double.valueOf(body.get("latitude").toString()) : (body.get("lat") != null ? Double.valueOf(body.get("lat").toString()) : null);
@@ -555,7 +571,7 @@ public class AmbulanceController {
             try {
                 AmbulanceLocationLog log = new AmbulanceLocationLog(
                     ambulance.getId(),
-                    ambulance.getCurrentEmergencyId(),
+                    emergencyId,
                     lat,
                     lng,
                     heading,
@@ -577,12 +593,28 @@ public class AmbulanceController {
         payload.put("heading", heading);
         payload.put("speed", speed);
         payload.put("timestamp", java.time.LocalDateTime.now().toString());
-        payload.put("emergencyId", ambulance.getCurrentEmergencyId());
+        payload.put("emergencyId", emergencyId);
+
+        if (messagingTemplate != null) {
+            try {
+                messagingTemplate.convertAndSend("/topic/ambulance/" + ambulance.getId(), (Object) payload);
+                if (emergencyId != null) {
+                    messagingTemplate.convertAndSend("/topic/emergency/" + emergencyId, (Object) payload);
+                    messagingTemplate.convertAndSend("/topic/emergency-updates", (Object) payload);
+                }
+            } catch (Exception ignored) {}
+        }
 
         // The AmbulanceService will broadcast this
         ambulanceService.updateAmbulanceStatus(ambulance.getId(), ambulance.getStatus(), lat, lng);
 
-        return ResponseEntity.ok(Map.of("success", true, "latitude", lat, "longitude", lng));
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "latitude", lat,
+            "longitude", lng,
+            "emergencyId", emergencyId != null ? emergencyId : 0L,
+            "timestamp", java.time.Instant.now().toString()
+        ));
     }
 
     @PostMapping("/start-journey")
@@ -607,6 +639,23 @@ public class AmbulanceController {
         }
 
         Ambulance ambulance = ambulanceOpt.get();
+        if (ambulance.getCurrentEmergencyId() == null) {
+            if (body != null && body.get("emergencyId") != null) {
+                try {
+                    ambulance.setCurrentEmergencyId(Long.valueOf(body.get("emergencyId").toString()));
+                    ambulanceRepository.save(ambulance);
+                } catch (Exception ignored) {}
+            }
+            if (ambulance.getCurrentEmergencyId() == null && requestRepository != null) {
+                try {
+                    List<AmbulanceRequest> reqs = requestRepository.findByAmbulanceIdAndStatusIn(ambulance.getId(), List.of("ACCEPTED", "PENDING"));
+                    if (!reqs.isEmpty()) {
+                        ambulance.setCurrentEmergencyId(reqs.get(0).getEmergencyId());
+                        ambulanceRepository.save(ambulance);
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
         if (ambulance.getCurrentEmergencyId() == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "No active emergency dispatch assigned to this ambulance"));
         }
@@ -754,16 +803,19 @@ public class AmbulanceController {
         String cur = normalizeAmbulanceStatus(currentStatus);
         String next = normalizeAmbulanceStatus(newStatus);
 
-        Map<String, List<String>> validTransitions = Map.of(
-            "AVAILABLE", List.of("REQUESTED"),
-            "REQUESTED", List.of("ACCEPTED", "DECLINED", "REJECTED", "AVAILABLE"),
-            "ACCEPTED", List.of("EN_ROUTE_TO_PATIENT", "COMPLETED"),
-            "EN_ROUTE_TO_PATIENT", List.of("ARRIVED_AT_PATIENT", "COMPLETED"),
-            "ARRIVED_AT_PATIENT", List.of("PATIENT_PICKED_UP", "COMPLETED"),
-            "PATIENT_PICKED_UP", List.of("EN_ROUTE_TO_HOSPITAL", "COMPLETED"),
-            "EN_ROUTE_TO_HOSPITAL", List.of("ARRIVED_AT_HOSPITAL", "COMPLETED"),
-            "ARRIVED_AT_HOSPITAL", List.of("COMPLETED"),
-            "COMPLETED", List.of("AVAILABLE")
+        Map<String, List<String>> validTransitions = Map.ofEntries(
+            Map.entry("AVAILABLE", List.of("REQUESTED", "BUSY", "OFF_DUTY", "UNAVAILABLE")),
+            Map.entry("BUSY", List.of("AVAILABLE", "OFF_DUTY", "UNAVAILABLE")),
+            Map.entry("OFF_DUTY", List.of("AVAILABLE", "BUSY", "UNAVAILABLE")),
+            Map.entry("UNAVAILABLE", List.of("AVAILABLE", "BUSY", "OFF_DUTY")),
+            Map.entry("REQUESTED", List.of("ACCEPTED", "DECLINED", "REJECTED", "AVAILABLE", "BUSY")),
+            Map.entry("ACCEPTED", List.of("EN_ROUTE_TO_PATIENT", "COMPLETED", "AVAILABLE")),
+            Map.entry("EN_ROUTE_TO_PATIENT", List.of("ARRIVED_AT_PATIENT", "COMPLETED", "AVAILABLE")),
+            Map.entry("ARRIVED_AT_PATIENT", List.of("PATIENT_PICKED_UP", "COMPLETED", "AVAILABLE")),
+            Map.entry("PATIENT_PICKED_UP", List.of("EN_ROUTE_TO_HOSPITAL", "COMPLETED", "AVAILABLE")),
+            Map.entry("EN_ROUTE_TO_HOSPITAL", List.of("ARRIVED_AT_HOSPITAL", "COMPLETED", "AVAILABLE")),
+            Map.entry("ARRIVED_AT_HOSPITAL", List.of("COMPLETED", "AVAILABLE")),
+            Map.entry("COMPLETED", List.of("AVAILABLE", "BUSY", "OFF_DUTY"))
         );
 
         List<String> allowed = validTransitions.get(cur);

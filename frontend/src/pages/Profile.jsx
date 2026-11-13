@@ -16,12 +16,17 @@ import { LoadingState } from '../components/StateComponents';
  */
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+
+  const handleProfileLogout = () => {
+    logout();
+    window.location.replace('/login');
+  };
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -114,7 +119,7 @@ const Profile = () => {
   };
 
   return (
-    <DashboardLayout title={getProfileTitle()} user={user}>
+    <DashboardLayout title={getProfileTitle()} user={user} onLogout={handleProfileLogout}>
       <div style={{ maxWidth: '860px', margin: '0 auto' }}>
         {loading ? (
           <LoadingState message="Loading medical profile records..." />
@@ -189,6 +194,16 @@ const Profile = () => {
                     style={{ fontWeight: 700 }}
                   >
                     {isEditing ? 'Cancel Editing' : '✏️ Edit Profile'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleProfileLogout}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontWeight: 700, borderColor: '#ef4444', color: '#dc2626' }}
+                    title="Sign out of VitalGuard"
+                    data-testid="profile-signout-btn"
+                  >
+                    🚪 Sign Out
                   </button>
                 </div>
               </div>

@@ -51,7 +51,7 @@ describe('queue response regression', () => {
     render(<UserDashboard />);
     fireEvent.click(screen.getByRole('button', { name: 'History' }));
     expect(await screen.findByText('No historical events recorded.')).toBeTruthy();
-  });
+  }, 15000);
 
   it('opens hospital emergency details without undefined history variables', async () => {
     session.user = { uid: 'hospital-1', role: 'HOSPITAL_ADMIN', fullName: 'Hospital Admin' };

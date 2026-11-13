@@ -15,7 +15,8 @@ const DashboardLayout = ({
   onNotificationClick,
   wsConnected = true,
   activeSubtab,
-  onSelectSubtab
+  onSelectSubtab,
+  onLogout
 }) => {
   const [isSidebarOpenMobile, setIsSidebarOpenMobile] = useState(false);
 
@@ -35,6 +36,7 @@ const DashboardLayout = ({
           onCloseMobile={() => setIsSidebarOpenMobile(false)}
           activeSubtab={activeSubtab}
           onSelectSubtab={onSelectSubtab}
+          onLogout={onLogout}
         />
 
         {/* Main Content View */}
@@ -47,6 +49,7 @@ const DashboardLayout = ({
             notifications={notifications}
             onNotificationClick={onNotificationClick}
             onMenuToggle={() => setIsSidebarOpenMobile(!isSidebarOpenMobile)}
+            onLogout={onLogout}
           />
 
           {/* Page Content */}

@@ -74,7 +74,11 @@ const getWorkflowAmbulanceStatus = (sos, tracking) => {
 };
 
 const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const handleFamilyLogout = () => {
+    logout();
+    window.location.replace('/login');
+  };
   const [selectedPatientUid, setSelectedPatientUid] = useState(null);
   const [trackedEmergencyId, setTrackedEmergencyId] = useState(null);
   const rawTab = (typeof searchParams?.get === 'function' ? searchParams.get('tab') : searchParams?.tab) || 'overview';
@@ -679,7 +683,7 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
               emergencyId={activeSos.id}
               emergency={activeSos}
               patientLocation={[activeSos.latitude || 12.9716, activeSos.longitude || 77.5946]}
-              hospitalLocation={assignedHospital ? [assignedHospital.lat, assignedHospital.lng] : null}
+              hospitalLocation={assignedHospital ? [assignedHospital.lat, assignedHospital.lng] : (activeSos.hospitalLat && activeSos.hospitalLng ? [activeSos.hospitalLat, activeSos.hospitalLng] : [12.9800, 77.6000])}
               ambulanceLocation={ambCoords}
               ambulanceStatus={currentStatus}
               ambulanceUnitId={ambUnit}
@@ -689,6 +693,8 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
               vehicleRegistration={regPlate}
               vehicleType={vType}
               hospitalName={hosp}
+              hospitalAddress={activeSos.hospitalAddress || 'Emergency Medical Center'}
+              pickupAddress={activeSos.pickupAddress || 'Patient Incident Location'}
               height="460px"
             />
           </div>
@@ -933,6 +939,7 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
       wsConnected={wsConnected}
       activeSubtab={activeTab}
       onSelectSubtab={switchTab}
+      onLogout={handleFamilyLogout}
     >
       {activeTab === 'overview' && renderOverviewTab()}
       {activeTab === 'emergency' && renderEmergencyTab()}

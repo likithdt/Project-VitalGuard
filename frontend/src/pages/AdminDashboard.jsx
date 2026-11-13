@@ -10,7 +10,14 @@ import LiveTrackingMap from '../components/LiveTrackingMap';
 import CancelEmergencyModal from '../components/CancelEmergencyModal';
 
 function AdminDashboardInner({ defaultTab, navigate, location, searchParams, setSearchParams }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+
+  const handleAdminLogout = () => {
+    logout?.();
+    if (typeof window !== 'undefined') {
+      window.location.replace('/login');
+    }
+  };
 
   // Navigation tabs: overview, doctors, hospital-admins, drivers, hospitals, ambulances, emergencies, users, audit-logs
   const isAuditPath = location?.pathname?.includes('/audit-logs');
@@ -467,12 +474,14 @@ function AdminDashboardInner({ defaultTab, navigate, location, searchParams, set
           onCloseMobile={() => setIsSidebarOpenMobile(false)}
           activeSubtab={activeTab}
           onSelectSubtab={handleTabChange}
+          onLogout={handleAdminLogout}
         />
         <div className="dashboard-main">
           <Topbar
             title={getAdminPortalTitle()}
             user={user}
             onMenuToggle={() => setIsSidebarOpenMobile(!isSidebarOpenMobile)}
+            onLogout={handleAdminLogout}
           />
 
           <main className="dashboard-content">

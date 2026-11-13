@@ -245,7 +245,16 @@ const TopbarInner = ({
               <button
                 onClick={() => {
                   setIsProfileOpen(false);
-                  onNavigate(user?.role === 'PATIENT' || user?.role === 'FAMILY_MEMBER' ? '/user-dashboard' : '/healthcare-dashboard');
+                  const role = user?.role;
+                  if (role === 'ADMIN' || role === 'SYSTEM_ADMIN') {
+                    onNavigate('/admin');
+                  } else if (role === 'FAMILY_MEMBER') {
+                    onNavigate('/family-dashboard');
+                  } else if (role === 'PATIENT') {
+                    onNavigate('/user-dashboard');
+                  } else {
+                    onNavigate('/healthcare-dashboard');
+                  }
                 }}
                 className="dropdown-item"
               >
@@ -277,14 +286,20 @@ const TopbarWithRouter = (props) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
 
+  const handleLogout = () => {
+    if (props.onLogout) {
+      props.onLogout();
+    } else {
+      logout();
+      navigate('/login', { replace: true });
+    }
+  };
+
   return (
     <TopbarInner
       {...props}
       onNavigate={(path) => navigate(path)}
-      onLogout={() => {
-        logout();
-        navigate('/login');
-      }}
+      onLogout={handleLogout}
     />
   );
 };
@@ -292,11 +307,22 @@ const TopbarWithRouter = (props) => {
 const TopbarWithoutRouter = (props) => {
   const { logout } = useAuth();
 
+  const handleLogout = () => {
+    if (props.onLogout) {
+      props.onLogout();
+    } else {
+      logout?.();
+      if (typeof window !== 'undefined') {
+        window.location.replace('/login');
+      }
+    }
+  };
+
   return (
     <TopbarInner
       {...props}
       onNavigate={() => {}}
-      onLogout={() => logout?.()}
+      onLogout={handleLogout}
     />
   );
 };

@@ -71,12 +71,27 @@ export function useRealtimeRefresh(uid, emergencyId, patientUid = uid, user = nu
     connection.activate();
     const poll = setInterval(refresh, 30000);
     window.addEventListener('focus', refresh);
+
+    const handleLogout = () => {
+      active = false;
+      clearInterval(poll);
+      clearTimeout(timer.current);
+      timer.current = null;
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('vitalguard:logout', handleLogout);
+      try { connection.deactivate(); } catch {}
+      setConnected(false);
+      setClient(null);
+    };
+    window.addEventListener('vitalguard:logout', handleLogout);
+
     return () => {
       active = false;
       clearInterval(poll);
       clearTimeout(timer.current);
       timer.current = null;
       window.removeEventListener('focus', refresh);
+      window.removeEventListener('vitalguard:logout', handleLogout);
       connection.deactivate();
     };
   }, [uid, refresh]);
@@ -137,9 +152,9 @@ export function useRealtimeRefresh(uid, emergencyId, patientUid = uid, user = nu
           });
         }
         
-        // Handle ambulance location updates from ambulance or emergency topics
+        // Handle ambulance location updates from any topic carrying valid coordinates
         const hasCoordinates = data.latitude != null && data.longitude != null;
-        if (hasCoordinates && (topic.startsWith('/topic/ambulance/') || topic === `/topic/emergency/${emergencyId}` || topic === '/topic/emergency-updates')) {
+        if (hasCoordinates) {
           const locObj = {
             latitude: Number(data.latitude),
             longitude: Number(data.longitude),
@@ -216,15 +231,15 @@ export function useRealtimeRefresh(uid, emergencyId, patientUid = uid, user = nu
 // Live GPS Telemetry hook for authorized ambulance drivers
 export function useAmbulanceLocationSender() {
   const [isTracking, setIsTracking] = useState(false);
-  const [gpsStatus, setGpsStatus] = useState('IDLE'); // 'IDLE' | 'REQUESTING' | 'ACTIVE' | 'STALE' | 'DENIED' | 'UNAVAILABLE'
+  const [gpsStatus, setGpsStatus] = useState('IDLE'); // 'IDLE' | 'REQUESTING' | 'ACTIVE' | 'STALE' | 'DENIED' | 'UNAVAILABLE' | 'CONNECTION_LOST'
   const [gpsError, setGpsError] = useState(null);
   const [lastGpsTimestamp, setLastGpsTimestamp] = useState(null);
   const [currentCoords, setCurrentCoords] = useState(null);
 
   const watchIdRef = useRef(null);
-  const intervalRef = useRef(null);
   const staleCheckTimerRef = useRef(null);
   const lastUpdateRef = useRef(null);
+  const emergencyIdRef = useRef(null);
 
   const sendCoordsToBackend = useCallback(async (latitude, longitude, heading, speed) => {
     try {
@@ -232,42 +247,66 @@ export function useAmbulanceLocationSender() {
         latitude,
         longitude,
         heading: heading != null && !isNaN(heading) ? heading : null,
-        speed: speed != null && !isNaN(speed) ? speed : null
+        speed: speed != null && !isNaN(speed) ? speed : null,
+        emergencyId: emergencyIdRef.current || null
       });
-      lastUpdateRef.current = Date.now();
-      setLastGpsTimestamp(new Date());
-      setGpsStatus('ACTIVE');
-      setGpsError(null);
     } catch (err) {
       console.warn('Ambulance GPS telemetry delivery error:', err?.message);
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setGpsStatus('CONNECTION_LOST');
+        setGpsError('Dispatch telemetry connection lost. Check network connection.');
+      }
     }
   }, []);
 
   const handlePositionSuccess = useCallback((position) => {
+    if (!position || !position.coords) return;
     const { latitude, longitude, heading, speed } = position.coords;
+    if (latitude == null || longitude == null || isNaN(latitude) || isNaN(longitude)) return;
+
+    // Immediately record accurate satellite fix timestamp
+    const now = Date.now();
+    lastUpdateRef.current = now;
+    setLastGpsTimestamp(new Date(now));
     setCurrentCoords({ latitude, longitude, heading, speed });
+    setGpsStatus('ACTIVE');
+    setGpsError(null);
+
+    // Stream coordinates to backend & STOMP broker
     sendCoordsToBackend(latitude, longitude, heading, speed);
   }, [sendCoordsToBackend]);
 
   const handlePositionError = useCallback((error) => {
-    console.warn('Geolocation device error:', error);
+    console.warn('Geolocation device telemetry error:', error);
+    if (!error) return;
+
     if (error.code === 1) { // PERMISSION_DENIED
       setGpsStatus('DENIED');
       setGpsError('Location permission denied. Please allow GPS location permissions in your browser.');
     } else if (error.code === 2) { // POSITION_UNAVAILABLE
-      setGpsStatus('UNAVAILABLE');
-      setGpsError('Location unavailable. Searching for GPS satellite signal...');
+      // Only transition to UNAVAILABLE if we haven't received a recent fix
+      const age = lastUpdateRef.current ? Date.now() - lastUpdateRef.current : Infinity;
+      if (age > 30000) {
+        setGpsStatus('UNAVAILABLE');
+        setGpsError('Location unavailable. Searching for GPS satellite signal...');
+      }
     } else if (error.code === 3) { // TIMEOUT
-      setGpsStatus('STALE');
-      setGpsError('GPS fix timed out. Retrying satellite lock...');
+      // Do NOT immediately mark stale on individual browser timeouts if last fix was received within 30 seconds
+      const age = lastUpdateRef.current ? Date.now() - lastUpdateRef.current : Infinity;
+      if (age >= 30000) {
+        setGpsStatus('STALE');
+        setGpsError('GPS fix timed out. Re-acquiring telemetry...');
+      }
     } else {
       setGpsStatus('UNAVAILABLE');
       setGpsError('GPS telemetry offline.');
     }
   }, []);
 
-  const startTracking = useCallback(() => {
-    if (isTracking) return;
+  const startTracking = useCallback((emergencyId) => {
+    if (emergencyId) {
+      emergencyIdRef.current = emergencyId;
+    }
 
     if (typeof window === 'undefined' || !navigator.geolocation) {
       setGpsStatus('UNAVAILABLE');
@@ -275,60 +314,82 @@ export function useAmbulanceLocationSender() {
       return;
     }
 
+    if (watchIdRef.current !== null) {
+      // Already running active watchPosition
+      return;
+    }
+
     setIsTracking(true);
     setGpsStatus('REQUESTING');
     setGpsError(null);
 
-    // Initial immediate GPS fix
+    // Initial immediate GPS fix with adaptive fallback (try high accuracy, fallback to low accuracy on timeout)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         handlePositionSuccess(pos);
       },
       (err) => {
-        handlePositionError(err);
+        if (err.code === 3 || err.code === 2) {
+          // Retry with standard accuracy (Wi-Fi/Cellular lock)
+          navigator.geolocation.getCurrentPosition(
+            handlePositionSuccess,
+            handlePositionError,
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 10000 }
+          );
+        } else {
+          handlePositionError(err);
+        }
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
 
-    // Continuous watchPosition
+    // Continuous watchPosition (browser streams updates whenever physical location shifts)
     watchIdRef.current = navigator.geolocation.watchPosition(
       handlePositionSuccess,
       handlePositionError,
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 2000
+        timeout: 20000,
+        maximumAge: 3000
       }
     );
 
-    // Periodic heartbeat sync every 6 seconds as backup
-    intervalRef.current = setInterval(() => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          handlePositionSuccess,
-          handlePositionError,
-          { enableHighAccuracy: true, timeout: 5000, maximumAge: 3000 }
-        );
-      }
-    }, 6000);
-
-    // Stale GPS watchdog: check if last GPS update was more than 30s ago
+    // Stale GPS watchdog: accurately checks if age of last GPS update exceeds 30 seconds
+    if (staleCheckTimerRef.current) clearInterval(staleCheckTimerRef.current);
     staleCheckTimerRef.current = setInterval(() => {
-      if (lastUpdateRef.current && (Date.now() - lastUpdateRef.current > 30000)) {
-        setGpsStatus(prev => prev === 'ACTIVE' ? 'STALE' : prev);
+      const age = lastUpdateRef.current ? Date.now() - lastUpdateRef.current : Infinity;
+      
+      // Check network connectivity
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setGpsStatus('CONNECTION_LOST');
+        setGpsError('Network offline. Waiting for connection recovery...');
+        return;
       }
-    }, 5000);
 
-  }, [isTracking, handlePositionSuccess, handlePositionError]);
+      if (age > 30000) {
+        setGpsStatus(prev => (prev === 'ACTIVE' || prev === 'REQUESTING') ? 'STALE' : prev);
+        setGpsError('Last satellite fix was received over 30 seconds ago. Re-acquiring telemetry...');
+        
+        // Attempt a non-intrusive recovery query if satellite lock was lost
+        if (navigator.geolocation && watchIdRef.current !== null) {
+          navigator.geolocation.getCurrentPosition(
+            handlePositionSuccess,
+            () => {},
+            { enableHighAccuracy: false, timeout: 6000, maximumAge: 10000 }
+          );
+        }
+      } else if (age <= 30000 && lastUpdateRef.current) {
+        setGpsStatus(prev => (prev === 'STALE' || prev === 'CONNECTION_LOST' || prev === 'REQUESTING') ? 'ACTIVE' : prev);
+        setGpsError(null);
+      }
+    }, 3000);
+
+  }, [handlePositionSuccess, handlePositionError]);
 
   const stopTracking = useCallback(() => {
     if (watchIdRef.current !== null && typeof navigator !== 'undefined') {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
-    }
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
     }
     if (staleCheckTimerRef.current !== null) {
       clearInterval(staleCheckTimerRef.current);
@@ -340,14 +401,40 @@ export function useAmbulanceLocationSender() {
   }, []);
 
   useEffect(() => {
+    const handleLogout = () => {
+      stopTracking();
+    };
+    const handleOnline = () => {
+      const age = lastUpdateRef.current ? Date.now() - lastUpdateRef.current : Infinity;
+      if (age <= 30000 && lastUpdateRef.current) {
+        setGpsStatus('ACTIVE');
+        setGpsError(null);
+      }
+    };
+    const handleOffline = () => {
+      if (isTracking) {
+        setGpsStatus('CONNECTION_LOST');
+        setGpsError('Network offline. Waiting for connection recovery...');
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('vitalguard:logout', handleLogout);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+    }
     return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('vitalguard:logout', handleLogout);
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      }
       if (watchIdRef.current !== null && typeof navigator !== 'undefined') {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
-      if (intervalRef.current !== null) clearInterval(intervalRef.current);
       if (staleCheckTimerRef.current !== null) clearInterval(staleCheckTimerRef.current);
     };
-  }, []);
+  }, [isTracking, stopTracking]);
 
   return {
     isTracking,

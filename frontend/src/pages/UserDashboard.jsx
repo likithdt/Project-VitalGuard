@@ -74,7 +74,11 @@ const getWorkflowAmbulanceStatus = (sos, tracking) => {
 };
 
 const UserDashboardInner = ({ searchParams, setSearchParams }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const handleUserLogout = () => {
+    logout();
+    window.location.replace('/login');
+  };
   const [trackedEmergencyId, setTrackedEmergencyId] = useState(null);
   const rawTab = (typeof searchParams?.get === 'function' ? searchParams.get('tab') : searchParams?.tab) || 'overview';
   const activeTab = (rawTab === 'chat' || rawTab === 'med-ai' || rawTab === 'advisor') ? 'chat'
@@ -1120,11 +1124,14 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
 
             <LiveTrackingMap
               patientLocation={[activeSos.latitude, activeSos.longitude]}
-              hospitalLocation={assignedHospital ? [assignedHospital.lat, assignedHospital.lng] : (activeSos.hospitalLat && activeSos.hospitalLng ? [activeSos.hospitalLat, activeSos.hospitalLng] : null)}
+              hospitalLocation={assignedHospital ? [assignedHospital.lat, assignedHospital.lng] : (activeSos.hospitalLat && activeSos.hospitalLng ? [activeSos.hospitalLat, activeSos.hospitalLng] : [12.9800, 77.6000])}
               ambulanceLocation={ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : (trackingData?.latitude != null ? [trackingData.latitude, trackingData.longitude] : (activeSos.ambulanceLat && activeSos.ambulanceLng ? [activeSos.ambulanceLat, activeSos.ambulanceLng] : null))}
               ambulanceStatus={ambulanceLocation?.status || trackingData?.status || activeSos.status}
               ambulanceUnitId={ambulanceLocation?.unitId || trackingData?.ambulanceUnitId || activeSos.ambulanceUnitId || 'AMB-102'}
               driverName={trackingData?.driverName || activeSos.driverName}
+              hospitalName={assignedHospital?.name || activeSos.hospitalName || 'Destination Hospital'}
+              hospitalAddress={activeSos.hospitalAddress || 'Emergency Medical Center'}
+              pickupAddress={activeSos.pickupAddress || 'Patient Incident Location'}
               emergencyId={activeSos.id}
               emergency={activeSos}
               height="440px"
@@ -1319,6 +1326,7 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
       wsConnected={wsConnected}
       activeSubtab={activeTab}
       onSelectSubtab={switchTab}
+      onLogout={handleUserLogout}
     >
       {/* Cancellation Success / Error Notification Banner */}
       {cancellationNotification && (

@@ -95,6 +95,7 @@ const LiveTrackingMap = ({
   isGpsStale = false,
   isGpsDenied = false,
   isGpsUnavailable = false,
+  isGpsConnectionLost = false,
   gpsStatus = 'ACTIVE',
   onMapLoad,
   onStatusChange,
@@ -112,21 +113,38 @@ const LiveTrackingMap = ({
   const [mapProvider, setMapProvider] = useState('leaflet'); // 'leaflet' | 'canvas'
   const [isFollowing, setIsFollowing] = useState(followAmbulance);
   const [lastGpsUpdate, setLastGpsUpdate] = useState(new Date());
+  const [telemetryAgeSec, setTelemetryAgeSec] = useState(0);
   const [currentHeading, setCurrentHeading] = useState(0);
 
-  // Normalized coordinates
+  // Keep track of real-time telemetry age in seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (lastGpsUpdate) {
+        setTelemetryAgeSec(Math.max(0, Math.floor((Date.now() - new Date(lastGpsUpdate).getTime()) / 1000)));
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [lastGpsUpdate]);
+
+  // Normalized coordinates - Route origin is ALWAYS the patient's home GPS location
   const patPos = useMemo(() => {
     return normalizeCoordinate(patientLocation) ||
-      normalizeCoordinate(emergency ? [emergency.latitude, emergency.longitude] : null) ||
+      normalizeCoordinate(emergency ? [
+        emergency.patientLatitude ?? emergency.latitude ?? emergency.pickupLat,
+        emergency.patientLongitude ?? emergency.longitude ?? emergency.pickupLng
+      ] : null) ||
       [12.9716, 77.5946];
   }, [patientLocation, emergency]);
 
+  // Destination is ALWAYS the assigned destination hospital GPS coordinates
   const hospPos = useMemo(() => {
     return normalizeCoordinate(hospitalLocation) ||
-      normalizeCoordinate(emergency ? [emergency.hospitalLat, emergency.hospitalLng] : null) ||
+      normalizeCoordinate(emergency?.hospital ? [emergency.hospital.latitude ?? emergency.hospital.lat, emergency.hospital.longitude ?? emergency.hospital.lng] : null) ||
+      normalizeCoordinate(emergency ? [emergency.hospitalLat ?? emergency.hospitalLatitude, emergency.hospitalLng ?? emergency.hospitalLongitude] : null) ||
       [12.9800, 77.6000];
   }, [hospitalLocation, emergency]);
 
+  // Ambulance moving coordinates (independent from route origin)
   const initialAmbPos = useMemo(() => {
     return normalizeCoordinate(ambulanceLocation) ||
       normalizeCoordinate(emergency ? [emergency.ambulanceLat, emergency.ambulanceLng] : null) ||
@@ -136,17 +154,51 @@ const LiveTrackingMap = ({
   // Current live ambulance coordinate state
   const [currentAmbCoord, setCurrentAmbCoord] = useState(initialAmbPos);
 
-  // Driving routes cache (Leg 1: Amb -> Pat, Leg 2: Pat -> Hosp)
+  // Driving routes cache:
+  // roadLeg1: Ambulance -> Patient Pickup (Approach)
+  // roadLeg2: Patient Home -> Destination Hospital (COMPLETE MAIN ROUTE)
   const [roadLeg1, setRoadLeg1] = useState(null);
   const [roadLeg2, setRoadLeg2] = useState(null);
+  const [roadRemainingToHosp, setRoadRemainingToHosp] = useState(null);
   const [activeDistance, setActiveDistance] = useState(null);
   const [activeEta, setActiveEta] = useState(null);
+  const autoFittedRef = useRef(false);
 
   const haversineDistance = useMemo(() => {
     if (!currentAmbCoord || !patPos) return 1.3;
     const d = calcHaversineDistance(currentAmbCoord[0], currentAmbCoord[1], patPos[0], patPos[1]);
     return d != null ? Number(d.toFixed(1)) : 1.3;
   }, [currentAmbCoord, patPos]);
+
+  // Track and separate distance metrics:
+  // 1. Patient Home -> Destination Hospital (Main Route with urban road factor)
+  const distPatToHosp = useMemo(() => {
+    if (roadLeg2?.distanceKm != null) return roadLeg2.distanceKm;
+    if (!patPos || !hospPos) return 4.5;
+    const d = calcHaversineDistance(patPos[0], patPos[1], hospPos[0], hospPos[1]);
+    return d != null ? Number((d * 1.35).toFixed(1)) : 4.5;
+  }, [roadLeg2, patPos, hospPos]);
+
+  const etaPatToHosp = useMemo(() => {
+    if (roadLeg2?.etaMinutes != null) return roadLeg2.etaMinutes;
+    return Math.max(1, Math.round((distPatToHosp / 30) * 60));
+  }, [roadLeg2, distPatToHosp]);
+
+  // 2. Ambulance -> Patient Home (Approach)
+  const distAmbToPat = useMemo(() => {
+    if (roadLeg1?.distanceKm != null) return roadLeg1.distanceKm;
+    return haversineDistance != null ? haversineDistance : 1.3;
+  }, [roadLeg1, haversineDistance]);
+
+  const etaAmbToPat = useMemo(() => {
+    if (roadLeg1?.etaMinutes != null) return roadLeg1.etaMinutes;
+    return Math.max(1, Math.round((distAmbToPat / 30) * 60));
+  }, [roadLeg1, distAmbToPat]);
+
+  // Reset auto-fit on emergency or status transition so the complete route is framed
+  useEffect(() => {
+    autoFittedRef.current = false;
+  }, [emergencyId, ambulanceStatus]);
 
   // Emergency status normalization
   const normalizedStatus = useMemo(() => {
@@ -244,27 +296,50 @@ const LiveTrackingMap = ({
   // ==========================================================================
   // ROUTE CALCULATION VIA OSRM ENGINE
   // ==========================================================================
+
+  // 1. Fetch Primary Highlighted Route: Patient Location -> Destination Hospital
   useEffect(() => {
+    if (!patPos || !hospPos) return;
     let isSubscribed = true;
 
-    // Fetch Leg 1: Ambulance -> Patient
-    if (currentAmbCoord && patPos) {
-      getDrivingRoute(currentAmbCoord, patPos).then(res => {
-        if (isSubscribed && res) setRoadLeg1(res);
-      });
-    }
-
-    // Fetch Leg 2: Patient -> Hospital
-    if (patPos && hospPos) {
-      getDrivingRoute(patPos, hospPos).then(res => {
-        if (isSubscribed && res) setRoadLeg2(res);
-      });
-    }
+    getDrivingRoute(patPos, hospPos).then(res => {
+      if (isSubscribed && res) {
+        setRoadLeg2(res);
+      }
+    });
 
     return () => { isSubscribed = false; };
-  }, [currentAmbCoord, patPos, hospPos]);
+  }, [patPos?.[0], patPos?.[1], hospPos?.[0], hospPos?.[1]]);
 
-  // Update distance and transit ETA telemetry
+  // 2. Fetch Ambulance Approach Route to Patient (when navigating to pickup)
+  useEffect(() => {
+    if (!currentAmbCoord || !patPos || isHeadingToHospital) return;
+    let isSubscribed = true;
+
+    getDrivingRoute(currentAmbCoord, patPos).then(res => {
+      if (isSubscribed && res) {
+        setRoadLeg1(res);
+      }
+    });
+
+    return () => { isSubscribed = false; };
+  }, [currentAmbCoord?.[0], currentAmbCoord?.[1], patPos?.[0], patPos?.[1], isHeadingToHospital]);
+
+  // 3. Fetch Ambulance Remaining Route to Hospital (when patient onboard)
+  useEffect(() => {
+    if (!currentAmbCoord || !hospPos || !isHeadingToHospital) return;
+    let isSubscribed = true;
+
+    getDrivingRoute(currentAmbCoord, hospPos).then(res => {
+      if (isSubscribed && res) {
+        setRoadRemainingToHosp(res);
+      }
+    });
+
+    return () => { isSubscribed = false; };
+  }, [currentAmbCoord?.[0], currentAmbCoord?.[1], hospPos?.[0], hospPos?.[1], isHeadingToHospital]);
+
+  // 4. Update distance and transit ETA telemetry
   useEffect(() => {
     const targetPos = isHeadingToHospital ? hospPos : patPos;
     if (!currentAmbCoord || !targetPos) return;
@@ -286,8 +361,8 @@ const LiveTrackingMap = ({
             etaToPatient: !isHeadingToHospital ? res.etaMinutes : 0,
             distancePatientToHospital: leg2D,
             etaPatientToHospital: leg2E,
-            activeRemainingDistance: res.distanceKm,
-            activeRemainingEta: res.etaMinutes,
+            activeRemainingDistance: isHeadingToHospital ? res.distanceKm : Number((res.distanceKm + leg2D).toFixed(1)),
+            activeRemainingEta: isHeadingToHospital ? res.etaMinutes : (res.etaMinutes + leg2E),
             totalDistance: Number((leg1D + leg2D).toFixed(1)),
             totalEta: leg1E + leg2E,
             provider: res.provider
@@ -319,8 +394,8 @@ const LiveTrackingMap = ({
       leafletMapRef.current = null;
     }
 
-    const defaultLat = currentAmbCoord?.[0] || patPos?.[0] || hospPos?.[0] || 12.9716;
-    const defaultLng = currentAmbCoord?.[1] || patPos?.[1] || hospPos?.[1] || 77.5946;
+    const defaultLat = patPos?.[0] || hospPos?.[0] || 12.9716;
+    const defaultLng = patPos?.[1] || hospPos?.[1] || 77.5946;
 
     try {
       const map = L.map(containerRef.current, {
@@ -342,22 +417,16 @@ const LiveTrackingMap = ({
       leafletMapRef.current = map;
       setMapProvider('leaflet');
 
-      // Crucial Blank Map Fix: Invalidate size after layout completes
+      // Crucial Blank Map Fix: Invalidate size after layout completes at key milestones
       setTimeout(() => {
-        try {
-          map.invalidateSize();
-        } catch {
-          // ignore
-        }
-      }, 100);
-
+        try { map.invalidateSize(); } catch { /* ignore */ }
+      }, 50);
       setTimeout(() => {
-        try {
-          map.invalidateSize();
-        } catch {
-          // ignore
-        }
-      }, 350);
+        try { map.invalidateSize(); } catch { /* ignore */ }
+      }, 150);
+      setTimeout(() => {
+        try { map.invalidateSize(); } catch { /* ignore */ }
+      }, 400);
 
       if (onMapLoad) onMapLoad(map);
       return true;
@@ -366,7 +435,7 @@ const LiveTrackingMap = ({
       setMapProvider('canvas');
       return false;
     }
-  }, [currentAmbCoord, patPos, hospPos, onMapLoad]);
+  }, [onMapLoad]);
 
   // Mount Leaflet and attach ResizeObserver to prevent blank tiles on tab switches
   useEffect(() => {
@@ -458,7 +527,7 @@ const LiveTrackingMap = ({
               font-size: 10px;
               font-weight: 800;
               color: #0F766E;
-              background: rgba(255, 255, 255, 0.96);
+              background: rgba(255, 255, 255, 0.98);
               padding: 2px 8px;
               border-radius: 12px;
               border: 1px solid #99F6E4;
@@ -467,7 +536,7 @@ const LiveTrackingMap = ({
               margin-top: 3px;
               letter-spacing: 0.04em;
             ">
-              PATIENT LOCATION
+              PATIENT PICKUP (HOME)
             </div>
           </div>
         `,
@@ -476,7 +545,7 @@ const LiveTrackingMap = ({
 
       if (!markersRef.current.patient) {
         markersRef.current.patient = L.marker(patPos, { icon: patientIcon, zIndexOffset: 800 })
-          .bindPopup(`<strong>PATIENT LOCATION</strong><br/>${pickupAddress || 'Patient Incident Location'}<br/>GPS: ${patPos[0].toFixed(4)}, ${patPos[1].toFixed(4)}`)
+          .bindPopup(`<strong>PATIENT HOME (PICKUP ORIGIN)</strong><br/>${pickupAddress || 'Patient Home Location'}<br/>GPS: ${patPos[0].toFixed(4)}, ${patPos[1].toFixed(4)}`)
           .addTo(map);
       } else {
         markersRef.current.patient.setLatLng(patPos);
@@ -605,87 +674,86 @@ const LiveTrackingMap = ({
       }
     }
 
-    // 4. Two Complete Route Segments (Ambulance → Patient and Patient → Hospital)
+    // 4. Two Complete Route Segments:
+    // PRIMARY HIGHLIGHTED ROUTE: Patient Home Location -> Destination Hospital
+    // SECONDARY APPROACH ROUTE: Ambulance -> Patient Home Pickup (when approaching patient)
     if (showRoute) {
       const leg1Coords = roadLeg1?.coordinates || (currentAmbCoord && patPos ? [currentAmbCoord, patPos] : []);
       const leg2Coords = roadLeg2?.coordinates || (patPos && hospPos ? [patPos, hospPos] : []);
 
-      if (!isHeadingToHospital) {
-        // Phase 1: Navigating to Patient Pickup
-        // Segment 1 (Ambulance -> Patient): Active Medical Teal (#0D9488)
+      // 4A. PRIMARY ROUTE (PATIENT HOME -> DESTINATION HOSPITAL)
+      // ALWAYS drawn from Patient Home GPS coordinates to Destination Hospital
+      // Stays visible across ALL stages (Stage 1: En Route to Patient, Stage 2: Patient Onboard, Stage 3: Completed)
+      if (leg2Coords.length >= 2) {
+        if (polylinesRef.current.leg2) {
+          polylinesRef.current.leg2.setLatLngs(leg2Coords);
+          polylinesRef.current.leg2.setStyle({
+            color: '#2563EB',
+            weight: 6,
+            opacity: 0.95,
+            lineCap: 'round',
+            lineJoin: 'round'
+          });
+        } else {
+          polylinesRef.current.leg2 = L.polyline(leg2Coords, {
+            color: '#2563EB',
+            weight: 6,
+            opacity: 0.95,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+        }
+      }
+
+      // 4B. SECONDARY APPROACH ROUTE (AMBULANCE -> PATIENT HOME PICKUP)
+      if (!isHeadingToHospital && !isCompleted) {
+        // Stage 1: Ambulance travelling to patient pickup
         if (leg1Coords.length >= 2) {
           if (polylinesRef.current.leg1) {
             polylinesRef.current.leg1.setLatLngs(leg1Coords);
-            polylinesRef.current.leg1.setStyle({ color: '#0D9488', weight: 5, opacity: 0.95, dashArray: null });
+            polylinesRef.current.leg1.setStyle({
+              color: '#0D9488',
+              weight: 4.5,
+              opacity: 0.9,
+              dashArray: '6, 8',
+              lineCap: 'round',
+              lineJoin: 'round'
+            });
           } else {
             polylinesRef.current.leg1 = L.polyline(leg1Coords, {
               color: '#0D9488',
-              weight: 5,
-              opacity: 0.95,
-              lineCap: 'round',
-              lineJoin: 'round'
-            }).addTo(map);
-          }
-        }
-
-        // Segment 2 (Patient -> Hospital): Secondary dashed Blue (#2563EB)
-        if (leg2Coords.length >= 2) {
-          if (polylinesRef.current.leg2) {
-            polylinesRef.current.leg2.setLatLngs(leg2Coords);
-            polylinesRef.current.leg2.setStyle({ color: '#2563EB', weight: 4.5, opacity: 0.7, dashArray: '8, 8' });
-          } else {
-            polylinesRef.current.leg2 = L.polyline(leg2Coords, {
-              color: '#2563EB',
               weight: 4.5,
-              opacity: 0.7,
-              dashArray: '8, 8',
+              opacity: 0.9,
+              dashArray: '6, 8',
               lineCap: 'round',
               lineJoin: 'round'
             }).addTo(map);
           }
         }
       } else {
-        // Phase 2: Patient Picked Up, Transit to Hospital
-        // Segment 1 (Ambulance -> Patient): Traversed slate path (#475569)
-        if (leg1Coords.length >= 2) {
-          if (polylinesRef.current.leg1) {
-            polylinesRef.current.leg1.setLatLngs(leg1Coords);
-            polylinesRef.current.leg1.setStyle({ color: '#475569', weight: 4, opacity: 0.6, dashArray: '6, 6' });
-          } else {
-            polylinesRef.current.leg1 = L.polyline(leg1Coords, {
-              color: '#475569',
-              weight: 4,
-              opacity: 0.6,
-              dashArray: '6, 6',
-              lineCap: 'round',
-              lineJoin: 'round'
-            }).addTo(map);
-          }
-        }
-
-        // Segment 2 (Ambulance / Patient -> Hospital): Active Vibrant Blue (#2563EB)
-        const remainingToHosp = currentAmbCoord && hospPos ? [currentAmbCoord, hospPos] : leg2Coords;
-        if (remainingToHosp.length >= 2) {
-          if (polylinesRef.current.leg2) {
-            polylinesRef.current.leg2.setLatLngs(remainingToHosp);
-            polylinesRef.current.leg2.setStyle({ color: '#2563EB', weight: 5.5, opacity: 0.95, dashArray: null });
-          } else {
-            polylinesRef.current.leg2 = L.polyline(remainingToHosp, {
-              color: '#2563EB',
-              weight: 5.5,
-              opacity: 0.95,
-              lineCap: 'round',
-              lineJoin: 'round'
-            }).addTo(map);
-          }
+        // Stage 2 & 3: Patient Onboard / Hospital Transit / Completed
+        // Keep the approach path muted so attention stays on the primary Patient Home -> Hospital route
+        if (leg1Coords.length >= 2 && polylinesRef.current.leg1) {
+          polylinesRef.current.leg1.setStyle({
+            color: '#94A3B8',
+            weight: 3,
+            opacity: 0.45,
+            dashArray: '4, 6'
+          });
         }
       }
     }
 
-    // Auto-fit bounds on initial mount if not following
-    if (!isFollowing && boundsPoints.length >= 2) {
+    // Automatically zoom and fit the entire Patient Home -> Hospital route inside map
+    if (!autoFittedRef.current && boundsPoints.length >= 2) {
       try {
+        if (roadLeg2?.coordinates && roadLeg2.coordinates.length > 0) {
+          boundsPoints.push(roadLeg2.coordinates[0]);
+          boundsPoints.push(roadLeg2.coordinates[Math.floor(roadLeg2.coordinates.length / 2)]);
+          boundsPoints.push(roadLeg2.coordinates[roadLeg2.coordinates.length - 1]);
+        }
         map.fitBounds(boundsPoints, { padding: [55, 55], maxZoom: 15 });
+        autoFittedRef.current = true;
       } catch {
         // ignore bounds calculation error
       }
@@ -705,6 +773,7 @@ const LiveTrackingMap = ({
     isFollowing,
     currentHeading,
     isHeadingToHospital,
+    isCompleted,
     roadLeg1,
     roadLeg2
   ]);
@@ -714,15 +783,20 @@ const LiveTrackingMap = ({
     updateLeafletMap();
   }, [updateLeafletMap]);
 
-  // Fit bounds handler
+  // Fit bounds handler - perfectly frames the complete Patient Home -> Hospital route
   const handleFitBounds = () => {
     setIsFollowing(false);
     if (leafletMapRef.current) {
       const bounds = [];
-      if (currentAmbCoord) bounds.push(currentAmbCoord);
       if (patPos) bounds.push(patPos);
       if (hospPos) bounds.push(hospPos);
-      if (bounds.length > 0) {
+      if (currentAmbCoord) bounds.push(currentAmbCoord);
+      if (roadLeg2?.coordinates && roadLeg2.coordinates.length > 0) {
+        bounds.push(roadLeg2.coordinates[0]);
+        bounds.push(roadLeg2.coordinates[Math.floor(roadLeg2.coordinates.length / 2)]);
+        bounds.push(roadLeg2.coordinates[roadLeg2.coordinates.length - 1]);
+      }
+      if (bounds.length >= 2) {
         leafletMapRef.current.fitBounds(bounds, { padding: [55, 55], maxZoom: 15 });
       }
     }
@@ -772,11 +846,19 @@ const LiveTrackingMap = ({
               <stop offset="100%" stopColor="#2563EB" />
             </linearGradient>
           </defs>
-          {isDispatched && (
+          {/* Primary Main Route: Patient Home -> Destination Hospital (Always rendered) */}
+          <path
+            d="M 500,240 Q 640,180 780,120"
+            fill="none"
+            stroke="#2563EB"
+            strokeWidth="5"
+          />
+          {/* Approach Route: Ambulance -> Patient Home Pickup (Stage 1) */}
+          {isDispatched && !isHeadingToHospital && !isCompleted && (
             <path
-              d={isHeadingToHospital ? "M 520,200 Q 640,160 780,120" : "M 160,280 Q 320,220 520,200"}
+              d="M 180,320 Q 340,280 500,240"
               fill="none"
-              stroke="url(#liveTrackingRouteGradient)"
+              stroke="#0D9488"
               strokeWidth="4"
               strokeDasharray="8 6"
             />
@@ -800,7 +882,7 @@ const LiveTrackingMap = ({
             🏥
           </div>
           <span style={{ fontSize: '11px', color: '#E0F2FE', background: 'rgba(11, 31, 58, 0.9)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #1E3A8A' }}>
-            {hospitalName || 'Hospital'}
+            Destination: {hospitalName || 'Hospital'}
           </span>
         </div>
 
@@ -821,7 +903,7 @@ const LiveTrackingMap = ({
             📍
           </div>
           <span style={{ fontSize: '11px', color: '#ECFDF5', background: 'rgba(13, 148, 136, 0.9)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #14B8A6' }}>
-            Patient Pickup
+            Patient Pickup (Home)
           </span>
         </div>
 
@@ -880,7 +962,25 @@ const LiveTrackingMap = ({
         </div>
       )}
 
-      {isGpsStale && !isGpsDenied && (
+      {isGpsConnectionLost && !isGpsDenied && (
+        <div style={{
+          background: '#FEF2F2',
+          border: '1px solid #FECACA',
+          borderRadius: '8px',
+          padding: '8px 14px',
+          marginBottom: '8px',
+          fontSize: '12px',
+          color: '#B91C1C',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span>⚡</span>
+          <span><strong>CONNECTION LOST:</strong> Telemetry connection to dispatch server disconnected. Re-establishing link...</span>
+        </div>
+      )}
+
+      {isTrackingActive && !isGpsDenied && !isGpsUnavailable && !isGpsConnectionLost && (isGpsStale || telemetryAgeSec > 30) && telemetryAgeSec > 30 && (
         <div style={{
           background: '#FFFBEB',
           border: '1px solid #FDE68A',
@@ -894,7 +994,7 @@ const LiveTrackingMap = ({
           gap: '8px'
         }}>
           <span>⏱️</span>
-          <span><strong>GPS TELEMETRY STALE:</strong> Last satellite fix was received over 30 seconds ago. Re-acquiring telemetry...</span>
+          <span><strong>GPS TELEMETRY STALE:</strong> Last satellite fix was received {telemetryAgeSec > 0 ? `${telemetryAgeSec} seconds ago` : 'over 30 seconds ago'}. Re-acquiring telemetry...</span>
         </div>
       )}
 
@@ -1044,6 +1144,27 @@ const LiveTrackingMap = ({
           </button>
         </div>
 
+        {/* Inline styles for smooth marker transitions and emergency beacons */}
+        <style>{`
+          .custom-leaflet-ambulance-icon {
+            transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) !important;
+            will-change: transform;
+          }
+          @keyframes ambulanceBeacon {
+            0%, 100% { box-shadow: 0 0 16px rgba(220, 38, 38, 0.7); }
+            50% { box-shadow: 0 0 28px rgba(220, 38, 38, 1), 0 0 10px rgba(56, 189, 248, 0.85); }
+          }
+          @keyframes sirenBeaconPulse {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            100% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 12px #38BDF8; }
+          }
+          @keyframes patientRadarPulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 14px rgba(13, 148, 136, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); }
+          }
+        `}</style>
+
         {/* Floating ETA & Distance Telemetry Card (Bottom-Right) */}
         <div
           className="map-floating-eta"
@@ -1051,67 +1172,129 @@ const LiveTrackingMap = ({
             position: 'absolute',
             bottom: '14px',
             right: '14px',
-            background: 'rgba(255, 255, 255, 0.96)',
-            backdropFilter: 'blur(8px)',
-            border: '1px solid var(--color-gray-200, #E2E8F0)',
-            borderRadius: '12px',
-            padding: '8px 14px',
-            boxShadow: '0 4px 18px rgba(0, 0, 0, 0.12)',
+            background: 'rgba(255, 255, 255, 0.97)',
+            backdropFilter: 'blur(10px)',
+            border: '1.5px solid var(--color-gray-200, #E2E8F0)',
+            borderRadius: '14px',
+            padding: '12px 16px',
+            boxShadow: '0 6px 24px rgba(11, 31, 58, 0.15)',
             display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            zIndex: 10
+            flexDirection: 'column',
+            gap: '10px',
+            zIndex: 10,
+            minWidth: '320px'
           }}
         >
-          {/* Distance */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>📏</span>
-            <div>
-              <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
-                Distance
+          {/* Header Row: Stage indicator & Follow/Fit controls */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <span style={{
+              fontSize: '10.5px',
+              fontWeight: 800,
+              padding: '3px 8px',
+              borderRadius: '6px',
+              background: isCompleted ? '#ECFDF5' : isHeadingToHospital ? '#EFF6FF' : '#F0FDFA',
+              color: isCompleted ? '#059669' : isHeadingToHospital ? '#1D4ED8' : '#0F766E',
+              border: `1px solid ${isCompleted ? '#A7F3D0' : isHeadingToHospital ? '#BFDBFE' : '#99F6E4'}`
+            }}>
+              {isCompleted ? '✅ STAGE 3: COMPLETED' : isHeadingToHospital ? '🏥 STAGE 2: PATIENT ONBOARD' : '🚑 STAGE 1: APPROACHING PICKUP'}
+            </span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={handleFitBounds}
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '4px 8px', fontSize: '11px', fontWeight: 700, borderRadius: '6px' }}
+                title="Fit full Patient to Hospital route in view"
+              >
+                🔍 Fit Route
+              </button>
+              <button
+                type="button"
+                onClick={handleToggleFollow}
+                className={`btn btn-sm ${isFollowing ? 'btn-primary' : 'btn-secondary'}`}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title="Auto-center map on moving ambulance"
+              >
+                <span>{isFollowing ? '🎯' : '🧭'}</span>
+                <span>{isFollowing ? 'Following' : 'Follow'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Metric Grid: Separating Ambulance -> Patient vs Patient -> Hospital */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '8px',
+            background: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            borderRadius: '10px',
+            padding: '10px'
+          }}>
+            {/* Metric 1: Ambulance to Patient (Approach) */}
+            <div style={{ borderRight: '1px solid #E2E8F0', paddingRight: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 800, color: '#0D9488', textTransform: 'uppercase' }}>
+                <span>🚑</span>
+                <span>To Patient</span>
               </div>
-              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0B1F3A' }}>
-                {activeDistance != null ? `${Number(activeDistance.toFixed(1))} km` : (haversineDistance != null ? `${haversineDistance} km` : '1.3 km')}
+              <div style={{ fontSize: '15px', fontWeight: 900, color: '#0B1F3A', marginTop: '2px' }}>
+                {isHeadingToHospital || isCompleted ? 'Reached' : (distAmbToPat != null ? `${distAmbToPat} km` : '1.3 km')}
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginTop: '1px' }}>
+                {isHeadingToHospital || isCompleted ? 'Onboard' : (etaAmbToPat != null ? `${etaAmbToPat} mins` : '4 mins')}
+              </div>
+            </div>
+
+            {/* Metric 2: Complete Route (Patient Home -> Hospital) */}
+            <div style={{ paddingLeft: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase' }}>
+                <span>🏥</span>
+                <span>Patient ➔ Hospital</span>
+              </div>
+              <div style={{ fontSize: '15px', fontWeight: 900, color: '#0B1F3A', marginTop: '2px' }}>
+                {distPatToHosp != null ? `${distPatToHosp} km` : '4.5 km'}
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', marginTop: '1px' }}>
+                {etaPatToHosp != null ? `${etaPatToHosp} mins` : '10 mins'}
               </div>
             </div>
           </div>
 
-          <div style={{ height: '26px', width: '1px', backgroundColor: '#E2E8F0' }} />
-
-          {/* ETA */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>⏱️</span>
-            <div>
-              <div style={{ fontSize: '10px', fontWeight: 800, color: '#0D9488', textTransform: 'uppercase' }}>
-                ETA
-              </div>
-              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0D9488' }}>
-                {activeEta != null ? `${activeEta} mins` : '4 mins'}
-              </div>
+          {/* Destination & Transit Sub-banner */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '11px',
+            color: '#475569',
+            borderTop: '1px solid #F1F5F9',
+            paddingTop: '6px',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span>📍</span>
+              <span style={{ color: '#64748B' }}>Pickup:</span>
+              <strong style={{ color: '#0F172A', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {pickupAddress || 'Patient Home'}
+              </strong>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span>🏥</span>
+              <span style={{ color: '#64748B' }}>Dest:</span>
+              <strong style={{ color: '#0F172A', maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {hospitalName || 'Hospital'}
+              </strong>
             </div>
           </div>
-
-          <div style={{ height: '26px', width: '1px', backgroundColor: '#E2E8F0' }} />
-
-          {/* Follow Me Toggle Button */}
-          <button
-            type="button"
-            onClick={handleToggleFollow}
-            className={`btn btn-sm ${isFollowing ? 'btn-primary' : 'btn-secondary'}`}
-            style={{
-              padding: '6px 12px',
-              fontSize: '11px',
-              fontWeight: 700,
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-            title="Auto-center map on moving ambulance"
-          >
-            <span>{isFollowing ? '🎯' : '🧭'}</span>
-            <span>{isFollowing ? 'Following' : 'Follow'}</span>
-          </button>
         </div>
 
         {/* Floating Route Legend (Bottom-Left) */}

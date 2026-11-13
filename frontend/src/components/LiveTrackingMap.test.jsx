@@ -118,4 +118,25 @@ describe('LiveTrackingMap Component', () => {
     const toggleBtn = screen.getByRole('button', { name: /Map|Radar/i });
     expect(toggleBtn).toBeTruthy();
   });
+
+  it('renders permission denied banner when isGpsDenied is true', () => {
+    render(<LiveTrackingMap {...mockProps} isGpsDenied={true} />);
+    expect(screen.getByText(/LOCATION PERMISSION DENIED/i)).toBeTruthy();
+  });
+
+  it('renders connection lost banner when isGpsConnectionLost is true', () => {
+    render(<LiveTrackingMap {...mockProps} isGpsConnectionLost={true} />);
+    expect(screen.getByText(/CONNECTION LOST/i)).toBeTruthy();
+  });
+
+  it('suppresses GPS stale banner while coordinates are fresh (<30s)', () => {
+    render(
+      <LiveTrackingMap
+        {...mockProps}
+        isTrackingActive={true}
+        isGpsStale={false}
+      />
+    );
+    expect(screen.queryByText(/GPS TELEMETRY STALE/i)).toBeNull();
+  });
 });

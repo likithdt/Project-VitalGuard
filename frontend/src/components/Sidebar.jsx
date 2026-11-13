@@ -258,11 +258,21 @@ const SidebarContent = ({
             <button
               onClick={onLogout}
               className="btn btn-ghost btn-sm"
-              style={{ padding: '6px', color: 'var(--color-critical)' }}
+              style={{
+                padding: '6px 10px',
+                color: 'var(--color-critical)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '12px',
+                fontWeight: 700
+              }}
               title="Sign Out"
               aria-label="Sign Out"
+              data-testid="sidebar-signout-btn"
             >
-              🚪
+              <span>🚪</span>
+              <span>Sign Out</span>
             </button>
           </div>
         ) : (
@@ -271,6 +281,7 @@ const SidebarContent = ({
             className="btn btn-ghost btn-icon w-full"
             title="Sign Out"
             aria-label="Sign Out"
+            data-testid="sidebar-signout-btn"
           >
             🚪
           </button>
@@ -284,6 +295,15 @@ const SidebarWithRouter = (props) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const handleLogout = () => {
+    if (props.onLogout) {
+      props.onLogout();
+    } else {
+      logout();
+      navigate('/login', { replace: true });
+    }
+  };
 
   return (
     <SidebarContent
@@ -301,16 +321,24 @@ const SidebarWithRouter = (props) => {
         }
         navigate(path);
       }}
-      onLogout={() => {
-        logout();
-        navigate('/login');
-      }}
+      onLogout={handleLogout}
     />
   );
 };
 
 const SidebarWithoutRouter = (props) => {
   const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    if (props.onLogout) {
+      props.onLogout();
+    } else {
+      logout?.();
+      if (typeof window !== 'undefined') {
+        window.location.replace('/login');
+      }
+    }
+  };
 
   return (
     <SidebarContent
@@ -326,7 +354,7 @@ const SidebarWithoutRouter = (props) => {
           props.onSelectSubtab(tab);
         }
       }}
-      onLogout={() => logout?.()}
+      onLogout={handleLogout}
     />
   );
 };

@@ -28,6 +28,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('hospitalId');
     localStorage.removeItem('doctorId');
     localStorage.removeItem('ambulanceId');
+    localStorage.removeItem('user');
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
   };
 
   useEffect(() => {
@@ -71,6 +75,9 @@ export const AuthProvider = ({ children }) => {
     clearUserStorage();
     setToken(null);
     setUser(null);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('vitalguard:logout'));
+    }
   };
 
   const updateProfile = async (updates) => {

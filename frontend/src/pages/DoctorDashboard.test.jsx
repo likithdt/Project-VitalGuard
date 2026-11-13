@@ -365,4 +365,37 @@ describe('Doctor Dashboard - Physician Emergency Portal Tests', () => {
     // Verify specific error message is shown in the modal alert
     expect(await screen.findByText(/Doctor not authorized to resolve unassigned emergency/i)).toBeTruthy();
   });
+
+  it('Ambulance Command Console renders exactly one Sign Out button in the sidebar and none in the status panel', async () => {
+    const mockLogout = vi.fn();
+    vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+      user: {
+        id: 99,
+        username: 'driver1',
+        fullName: 'Officer Vikram Singh',
+        role: 'AMBULANCE_DRIVER',
+        unitNumber: 'AMB-101'
+      },
+      logout: mockLogout,
+      isAuthenticated: true
+    });
+
+    render(<HealthcareDashboard />);
+
+    // Wait for Ambulance Command Console to render
+    const consoleTitles = await screen.findAllByText(/Ambulance Command Console/i);
+    expect(consoleTitles.length).toBeGreaterThan(0);
+
+    // Check that there is no duplicate signout button in the status panel
+    expect(screen.queryByTestId('driver-signout-btn')).toBeNull();
+
+    // Verify exactly one sidebar signout button exists
+    const signoutButtons = screen.getAllByRole('button', { name: /sign out/i });
+    expect(signoutButtons.length).toBe(1);
+    expect(signoutButtons[0].getAttribute('data-testid')).toBe('sidebar-signout-btn');
+
+    // Clicking sidebar signout invokes logout
+    fireEvent.click(signoutButtons[0]);
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+  });
 });

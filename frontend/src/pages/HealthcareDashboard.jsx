@@ -9,7 +9,7 @@ import StatCard from '../components/StatCard';
 import StatusBadge from '../components/StatusBadge';
 import EmergencyTimeline from '../components/EmergencyTimeline';
 import EmergencyAlert from '../components/EmergencyAlert';
-import GoogleMapTracking from '../components/GoogleMapTracking';
+import LiveTrackingMap from '../components/LiveTrackingMap';
 import EmergencyDetails from '../components/EmergencyDetails';
 import DoctorAssessmentModal from '../components/DoctorAssessmentModal';
 import { EmptyState } from '../components/StateComponents';
@@ -110,7 +110,8 @@ const HealthcareDashboardInner = ({ searchParams, setSearchParams }) => {
     connected: wsConnected,
     revision,
     refresh,
-    ambulanceLocation
+    ambulanceLocation,
+    ambulanceLocationsMap = {}
   } = useRealtimeRefresh(user?.uid, selectedEmergencyId, selectedPatientUid, user);
 
   // Emergencies queue based on role
@@ -997,14 +998,19 @@ const loadDriverData = useCallback(async () => {
                           </span>
                         </div>
 
-                        <GoogleMapTracking
+                        <LiveTrackingMap
+                          emergencyId={selectedEmergency.id}
+                          emergency={selectedEmergency}
                           patientLocation={[selectedEmergency.latitude, selectedEmergency.longitude]}
                           hospitalLocation={selectedEmergency.hospitalLat && selectedEmergency.hospitalLng ? [selectedEmergency.hospitalLat, selectedEmergency.hospitalLng] : [12.9716, 77.5946]}
-                          ambulanceLocation={ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : [12.9650, 77.5850]}
+                          ambulanceLocation={
+                            (ambulanceLocationsMap && ambulanceLocationsMap[selectedEmergency.id])
+                              ? [ambulanceLocationsMap[selectedEmergency.id].latitude, ambulanceLocationsMap[selectedEmergency.id].longitude]
+                              : (ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : [selectedEmergency.ambulanceLat || 12.9650, selectedEmergency.ambulanceLng || 77.5850])
+                          }
                           ambulanceStatus={selectedEmergency.status}
                           ambulanceUnitId={selectedEmergency.ambulanceUnitId || 'AMB-102'}
                           driverName={selectedEmergency.driverName}
-                          emergencyId={selectedEmergency.id}
                           height="360px"
                         />
                       </div>
@@ -1546,14 +1552,19 @@ const loadDriverData = useCallback(async () => {
                     <h4 style={{ fontSize: '13px', fontWeight: 800, marginBottom: '8px', color: 'var(--color-gray-900)' }}>
                       Live Ambulance Tracking (Patient 📍, Ambulance 🚑, Hospital 🏥)
                     </h4>
-                    <GoogleMapTracking
+                    <LiveTrackingMap
+                      emergencyId={activeDoctorIncident.id}
+                      emergency={activeDoctorIncident}
                       patientLocation={[activeDoctorIncident.latitude, activeDoctorIncident.longitude]}
                       hospitalLocation={activeDoctorIncident.hospitalLat && activeDoctorIncident.hospitalLng ? [activeDoctorIncident.hospitalLat, activeDoctorIncident.hospitalLng] : [12.9716, 77.5946]}
-                      ambulanceLocation={ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : [12.9650, 77.5850]}
+                      ambulanceLocation={
+                        (ambulanceLocationsMap && ambulanceLocationsMap[activeDoctorIncident.id])
+                          ? [ambulanceLocationsMap[activeDoctorIncident.id].latitude, ambulanceLocationsMap[activeDoctorIncident.id].longitude]
+                          : (ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : [activeDoctorIncident.ambulanceLat || 12.9650, activeDoctorIncident.ambulanceLng || 77.5850])
+                      }
                       ambulanceStatus={activeDoctorIncident.status}
                       ambulanceUnitId={activeDoctorIncident.ambulanceUnitId || 'AMB-102'}
                       driverName={activeDoctorIncident.driverName}
-                      emergencyId={activeDoctorIncident.id}
                       height="320px"
                     />
                   </div>
@@ -2194,7 +2205,7 @@ const loadDriverData = useCallback(async () => {
               {/* Left Column: Interactive Map, 8-Stage Timeline Stepper & Action Controls */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                 {/* Interactive Leaflet Tracking Map with custom markers and OSRM driving routes */}
-                <GoogleMapTracking
+                <LiveTrackingMap
                   patientLocation={[activeEmergency.latitude, activeEmergency.longitude]}
                   hospitalLocation={activeEmergency.hospitalLat && activeEmergency.hospitalLng ? [activeEmergency.hospitalLat, activeEmergency.hospitalLng] : [12.9716, 77.5946]}
                   ambulanceLocation={currentCoords ? [currentCoords.latitude, currentCoords.longitude] : (ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : (currentAmbulance?.latitude ? [currentAmbulance.latitude, currentAmbulance.longitude] : [12.9650, 77.5850]))}
@@ -2205,6 +2216,7 @@ const loadDriverData = useCallback(async () => {
                   hospitalAddress={activeEmergency.hospitalAddress || 'Emergency Trauma Center'}
                   pickupAddress={activeEmergency.pickupAddress || 'Patient Location'}
                   emergencyId={activeEmergency.id}
+                  emergency={activeEmergency}
                   followAmbulance={true}
                   height="480px"
                   isTrackingActive={isJourneyActive}

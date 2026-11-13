@@ -6,7 +6,7 @@ import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import StatusBadge from '../components/StatusBadge';
 import { useRealtimeRefresh } from '../services/websocket';
-import GoogleMapTracking from '../components/GoogleMapTracking';
+import LiveTrackingMap from '../components/LiveTrackingMap';
 import CancelEmergencyModal from '../components/CancelEmergencyModal';
 
 function AdminDashboardInner({ defaultTab, navigate, location, searchParams, setSearchParams }) {
@@ -1724,7 +1724,7 @@ function AdminDashboardInner({ defaultTab, navigate, location, searchParams, set
                             </div>
                           </div>
 
-                          <GoogleMapTracking
+                          <LiveTrackingMap
                             patientLocation={[e.patientLatitude || e.latitude || 12.9716, e.patientLongitude || e.longitude || 77.5946]}
                             hospitalLocation={e.hospital?.latitude && e.hospital?.longitude ? [e.hospital.latitude, e.hospital.longitude] : (e.hospitalLat && e.hospitalLng ? [e.hospitalLat, e.hospitalLng] : [12.9760, 77.6000])}
                             ambulanceLocation={ambCoords}
@@ -1732,6 +1732,7 @@ function AdminDashboardInner({ defaultTab, navigate, location, searchParams, set
                             ambulanceUnitId={ambUnitId}
                             driverName={driverName}
                             emergencyId={e.id}
+                            emergency={e}
                             height="340px"
                           />
                         </div>

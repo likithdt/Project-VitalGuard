@@ -11,6 +11,9 @@ vi.mock('../components/MapComponent', () => ({
 vi.mock('../components/GoogleMapTracking', () => ({
   default: () => <div data-testid="mock-google-map">Mock Google Map Tracking</div>
 }));
+vi.mock('../components/LiveTrackingMap', () => ({
+  default: () => <div data-testid="mock-google-map">Mock Google Map Tracking</div>
+}));
 vi.mock('../services/websocket', () => ({
   useRealtimeRefresh: () => ({
     connected: true,

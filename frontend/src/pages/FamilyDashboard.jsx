@@ -9,7 +9,7 @@ import VitalCard from '../components/VitalCard';
 import EmergencyTimeline from '../components/EmergencyTimeline';
 import EmergencyAlert from '../components/EmergencyAlert';
 import StatusBadge from '../components/StatusBadge';
-import GoogleMapTracking from '../components/GoogleMapTracking';
+import LiveTrackingMap from '../components/LiveTrackingMap';
 import UberJourneyStepper from '../components/UberJourneyStepper';
 import ConfirmModal from '../components/ConfirmModal';
 import { EmptyState, LoadingState } from '../components/StateComponents';
@@ -675,7 +675,9 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
               </span>
             </div>
 
-            <GoogleMapTracking
+            <LiveTrackingMap
+              emergencyId={activeSos.id}
+              emergency={activeSos}
               patientLocation={[activeSos.latitude || 12.9716, activeSos.longitude || 77.5946]}
               hospitalLocation={assignedHospital ? [assignedHospital.lat, assignedHospital.lng] : null}
               ambulanceLocation={ambCoords}
@@ -687,7 +689,6 @@ const FamilyDashboardInner = ({ searchParams, setSearchParams }) => {
               vehicleRegistration={regPlate}
               vehicleType={vType}
               hospitalName={hosp}
-              emergencyId={activeSos.id}
               height="460px"
             />
           </div>

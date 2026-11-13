@@ -16,6 +16,15 @@ vi.mock('../components/GoogleMapTracking', () => ({
     </div>
   )
 }));
+vi.mock('../components/LiveTrackingMap', () => ({
+  default: (props) => (
+    <div data-testid="mock-google-map-tracking">
+      <span>Mock Map Tracking</span>
+      <span>Emergency: {props.emergencyId}</span>
+      <span>Status: {props.ambulanceStatus}</span>
+    </div>
+  )
+}));
 
 describe('AdminDashboard Component', () => {
   beforeEach(() => {

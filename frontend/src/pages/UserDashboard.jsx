@@ -8,7 +8,7 @@ import VitalCard from '../components/VitalCard';
 import EmergencyTimeline from '../components/EmergencyTimeline';
 import EmergencyAlert from '../components/EmergencyAlert';
 import StatusBadge from '../components/StatusBadge';
-import GoogleMapTracking from '../components/GoogleMapTracking';
+import LiveTrackingMap from '../components/LiveTrackingMap';
 import LiveRouteTracker from '../components/LiveRouteTracker';
 import ConfirmModal from '../components/ConfirmModal';
 import CancelEmergencyModal from '../components/CancelEmergencyModal';
@@ -1118,7 +1118,7 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
               </span>
             </div>
 
-            <GoogleMapTracking
+            <LiveTrackingMap
               patientLocation={[activeSos.latitude, activeSos.longitude]}
               hospitalLocation={assignedHospital ? [assignedHospital.lat, assignedHospital.lng] : (activeSos.hospitalLat && activeSos.hospitalLng ? [activeSos.hospitalLat, activeSos.hospitalLng] : null)}
               ambulanceLocation={ambulanceLocation ? [ambulanceLocation.latitude, ambulanceLocation.longitude] : (trackingData?.latitude != null ? [trackingData.latitude, trackingData.longitude] : (activeSos.ambulanceLat && activeSos.ambulanceLng ? [activeSos.ambulanceLat, activeSos.ambulanceLng] : null))}
@@ -1126,6 +1126,7 @@ const UserDashboardInner = ({ searchParams, setSearchParams }) => {
               ambulanceUnitId={ambulanceLocation?.unitId || trackingData?.ambulanceUnitId || activeSos.ambulanceUnitId || 'AMB-102'}
               driverName={trackingData?.driverName || activeSos.driverName}
               emergencyId={activeSos.id}
+              emergency={activeSos}
               height="440px"
             />
           </div>
